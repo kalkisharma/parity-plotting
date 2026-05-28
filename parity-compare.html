@@ -1,5 +1,6 @@
-<!-- parity-compare v1.0.7
+<!-- parity-compare 1.0.8
      Maintainer: Kalki Sharma <kalkijsharma@gmail.com>
+     Source files: src/  |  Build: node build.js
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -805,6 +806,7 @@ function renderTabBar(){
   });
 }
 
+
 /* ══════════════════════════════════════════════════
    SECTION 2 — CSV PARSING + INNER JOIN
 ══════════════════════════════════════════════════ */
@@ -882,6 +884,7 @@ function doJoin(){
     buildColDropdowns();
   }
 }
+
 
 /* ══════════════════════════════════════════════════
    SECTION 3 — COLUMN SEARCH UI
@@ -976,6 +979,7 @@ function updateCbarLockUi(){
   btn.setAttribute('aria-pressed',String(state.cbarLocked));
 }
 function setCbarDefault(){syncCbar();}
+
 
 /* ══════════════════════════════════════════════════
    SECTION 4 — PLOT RENDERING
@@ -1506,6 +1510,7 @@ g('bfColor').addEventListener('input',()=>{if(state.plotRendered)renderPlot();})
   }
 });
 
+
 /* ══════════════════════════════════════════════════
    SECTION 5 — SAVED PLOTS PANEL
 ══════════════════════════════════════════════════ */
@@ -1578,6 +1583,7 @@ function delSaved(idx,e){
   const card=g(`saved-card-${idx}`);if(card)card.remove();
 }
 
+
 /* ══════════════════════════════════════════════════
    SECTION 6 — STATS PANEL
 ══════════════════════════════════════════════════ */
@@ -1600,6 +1606,7 @@ function renderStats(xV,yV,nan,stats){
     <div class="stat-card"><div class="stat-label">Mean bias (B−A)</div><div class="stat-value">${f(bias)}</div></div>
     <div class="stat-card" style="grid-column:span 2"><div class="stat-label">Best-fit line</div><div class="stat-value" style="font-size:12px">${n>=3?`y = ${fs(slope)}x + ${fs(intc)} &nbsp;·&nbsp; R² = ${fs(r2f)}`:'n &lt; 3 — insufficient data for regression'}</div></div>`;
 }
+
 
 /* ══════════════════════════════════════════════════
    FILE WIRING + UTILITIES

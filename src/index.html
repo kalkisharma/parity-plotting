@@ -1,0 +1,333 @@
+<!-- parity-compare %%VERSION%%
+     Maintainer: Kalki Sharma <kalkijsharma@gmail.com>
+     Source files: src/  |  Build: node build.js
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Kalki Sharma">
+<meta name="contact" content="kalkijsharma@gmail.com">
+<title>Parity Compare</title>
+<!-- INJECT:LIBS -->
+<!-- INJECT:STYLE -->
+</head>
+<body>
+
+<header>
+  <div class="logo">PARITY<span>.compare</span></div>
+  <div class="divider"></div>
+  <div class="header-tag">CSV Dataset Validation Tool</div>
+  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.7</div>
+</header>
+
+<div class="tab-bar" id="tabBar" role="tablist" aria-label="Sessions">
+  <div class="tab-list" id="tabList"></div>
+  <button class="new-tab-btn" onclick="newSession()" title="New session" aria-label="New session">+</button>
+</div>
+
+<div class="main">
+  <div class="left-panel">
+
+    <!-- DATASETS -->
+    <div class="section">
+      <div class="section-title">Datasets</div>
+      <div class="dropzone" id="dzA" tabindex="0" role="button" aria-label="Load Dataset A">
+        <input type="file" accept=".csv" id="fileA" aria-label="Choose CSV for Dataset A">
+        <div class="dz-label">
+          <span class="dz-badge a">A</span>
+          <input type="text" class="dz-name-input" id="nameA" value="Dataset A" placeholder="Label..." onclick="event.stopPropagation()">
+        </div>
+        <div class="dz-status" id="statusA">Drop CSV or click to browse</div>
+      </div>
+      <div class="dropzone" id="dzB" tabindex="0" role="button" aria-label="Load Dataset B">
+        <input type="file" accept=".csv" id="fileB" aria-label="Choose CSV for Dataset B">
+        <div class="dz-label">
+          <span class="dz-badge b">B</span>
+          <input type="text" class="dz-name-input" id="nameB" value="Dataset B" placeholder="Label..." onclick="event.stopPropagation()">
+        </div>
+        <div class="dz-status" id="statusB">Drop CSV or click to browse</div>
+      </div>
+      <div id="fileAlerts"></div>
+    </div>
+
+    <!-- JOIN KEY -->
+    <div class="section" id="joinSection" style="display:none">
+      <div class="section-title">Join Key</div>
+      <label class="ctrl-label" for="keySearch">Unique identifier column</label>
+      <div class="search-wrap">
+        <input type="text" id="keySearch" placeholder="Search columns…" autocomplete="off" aria-label="Search identifier column" title="The column used to match rows between the two files — must exist in both datasets">
+        <button class="dd-clear hidden" id="keyClear" aria-label="Clear join key" title="Clear">×</button>
+        <div class="dropdown-list" id="keyDropdown" role="listbox"></div>
+      </div>
+      <div id="joinAlerts"></div>
+    </div>
+
+    <!-- COMPARISON COLUMNS -->
+    <div class="section" id="colSection" style="display:none">
+      <div class="section-title">Comparison Columns</div>
+      <label class="ctrl-label" for="colASearch">X-axis — from Dataset A</label>
+      <div class="search-wrap">
+        <input type="text" id="colASearch" placeholder="Search [A] columns…" autocomplete="off" aria-label="Search Dataset A column">
+        <button class="dd-clear hidden" id="colAClear" aria-label="Clear X-axis column" title="Clear">×</button>
+        <div class="dropdown-list" id="colADropdown" role="listbox"></div>
+      </div>
+      <label class="ctrl-label" for="colBSearch">Y-axis — from Dataset B</label>
+      <div class="search-wrap">
+        <input type="text" id="colBSearch" placeholder="Search [B] columns…" autocomplete="off" aria-label="Search Dataset B column">
+        <button class="dd-clear hidden" id="colBClear" aria-label="Clear Y-axis column" title="Clear">×</button>
+        <div class="dropdown-list" id="colBDropdown" role="listbox"></div>
+      </div>
+      <label class="ctrl-label" for="colorSearch">Color by</label>
+      <div class="search-wrap">
+        <input type="text" id="colorSearch" placeholder="Search columns…" autocomplete="off" aria-label="Search color-by column">
+        <button class="dd-clear hidden" id="colorClear" aria-label="Clear color-by selection" title="Clear">×</button>
+        <div class="dropdown-list" id="colorDropdown" role="listbox"></div>
+      </div>
+    </div>
+
+    <!-- PLOT CONTROLS -->
+    <div class="section" id="ctrlSection" style="display:none">
+      <div class="section-title">Plot Controls</div>
+
+      <label class="ctrl-label" for="cmapSelect">Colormap</label>
+      <select id="cmapSelect" aria-label="Colormap">
+        <option value="Viridis">Viridis</option>
+        <option value="Plasma">Plasma</option>
+        <option value="RdBu">RdBu</option>
+        <option value="Coolwarm" selected>Coolwarm</option>
+        <option value="Spectral">Spectral</option>
+        <option value="Turbo">Turbo</option>
+        <option value="Inferno">Inferno</option>
+        <option value="Magma">Magma</option>
+      </select>
+
+      <label class="ctrl-label">Marker size</label>
+      <div class="slider-row">
+        <input type="range" id="markerSize" min="3" max="20" value="7" step="1" aria-label="Marker size">
+        <span class="slider-val" id="markerSizeVal">7</span>
+      </div>
+
+      <label class="ctrl-label">Marker opacity</label>
+      <div class="slider-row">
+        <input type="range" id="markerOpacity" min="0" max="100" value="88" step="5" aria-label="Marker opacity">
+        <span class="slider-val" id="markerOpacityVal">88%</span>
+      </div>
+
+      <label class="ctrl-label">Marker edge</label>
+      <div class="edge-row">
+        <input type="color" class="edge-color" id="edgeColor" value="#000000" aria-label="Marker edge color" title="Marker edge color">
+        <div class="slider-row" style="flex:1">
+          <input type="range" id="edgeWidth" min="0" max="4" value="1" step="0.5" aria-label="Marker edge width">
+          <span class="slider-val" id="edgeWidthVal">1.0</span>
+        </div>
+      </div>
+
+      <div id="showCbarRow" style="display:none">
+        <label class="ctrl-label">Colorbar thickness (px)</label>
+        <div class="slider-row">
+          <input type="range" id="cbarThickness" min="5" max="60" value="22" step="1" aria-label="Colorbar thickness">
+          <span class="slider-val" id="cbarThicknessVal">22</span>
+        </div>
+        <div class="check-row" style="margin-top:6px">
+          <label><input type="checkbox" id="showColorbar" checked aria-label="Show colorbar"> Show colorbar</label>
+        </div>
+      </div>
+
+      <label class="ctrl-label">Error bands</label>
+      <div class="check-row">
+        <label title="±5%: shaded region where |y − x| / |x| ≤ 5%"><input type="checkbox" id="band5" aria-label="5% error band"> ±5% ⓘ</label>
+        <label title="±10%: shaded region where |y − x| / |x| ≤ 10%"><input type="checkbox" id="band10" checked aria-label="10% error band"> ±10% ⓘ</label>
+        <label title="Draw linear regression line (y = mx + b)"><input type="checkbox" id="showBestFit" aria-label="Best-fit line"> Best-fit line</label>
+      </div>
+
+      <label class="ctrl-label">Reference lines</label>
+      <div class="refline-block">
+        <div class="refline-sublabel">y = x</div>
+        <div class="refline-row">
+          <input type="color" class="edge-color" id="parityColor" value="#555555" aria-label="Parity line color" title="Parity line color">
+          <div class="slider-row" style="flex:1">
+            <input type="range" id="parityWidth" min="0.5" max="5" value="1.5" step="0.5" aria-label="Parity line width">
+            <span class="slider-val" id="parityWidthVal">1.5</span>
+          </div>
+          <select class="refline-dash" id="parityDash" aria-label="Parity line style">
+            <option value="solid">─ solid</option>
+            <option value="dash" selected>-- dash</option>
+            <option value="dot">·· dot</option>
+            <option value="dashdot">-· mix</option>
+          </select>
+        </div>
+        <div class="refline-sublabel">Best fit</div>
+        <div class="refline-row">
+          <input type="color" class="edge-color" id="bfColor" value="#dc2626" aria-label="Best-fit line color" title="Best-fit line color">
+          <div class="slider-row" style="flex:1">
+            <input type="range" id="bfWidth" min="0.5" max="5" value="1.5" step="0.5" aria-label="Best-fit line width">
+            <span class="slider-val" id="bfWidthVal">1.5</span>
+          </div>
+          <select class="refline-dash" id="bfDash" aria-label="Best-fit line style">
+            <option value="solid" selected>─ solid</option>
+            <option value="dash">-- dash</option>
+            <option value="dot">·· dot</option>
+            <option value="dashdot">-· mix</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="ctrl-label">Gridlines</label>
+      <div class="check-row">
+        <label><input type="checkbox" id="majorGrid" checked aria-label="Major gridlines"> Major</label>
+        <label><input type="checkbox" id="minorGrid" aria-label="Minor gridlines"> Minor</label>
+      </div>
+
+      <label class="ctrl-label">Axis ranges <span style="font-size:10px;color:var(--text3)">(blank = auto)</span></label>
+      <div class="range-grid">
+        <div><label class="mini-label">X min</label><input type="number" step="any" class="ctrl-input" id="xMin" placeholder="auto" aria-label="X axis minimum"></div>
+        <div><label class="mini-label">X max</label><input type="number" step="any" class="ctrl-input" id="xMax" placeholder="auto" aria-label="X axis maximum"></div>
+        <div><label class="mini-label">Y min</label><input type="number" step="any" class="ctrl-input" id="yMin" placeholder="auto" aria-label="Y axis minimum"></div>
+        <div><label class="mini-label">Y max</label><input type="number" step="any" class="ctrl-input" id="yMax" placeholder="auto" aria-label="Y axis maximum"></div>
+      </div>
+      <div id="rangeAlerts"></div>
+      <button class="btn sm" onclick="resetRanges()" style="margin-top:6px">↺ Reset to auto</button>
+
+      <label class="ctrl-label" for="inputTitle">Plot title</label>
+      <div class="input-lock-row">
+        <input type="text" class="ctrl-input" id="inputTitle" placeholder="Parity comparison…" aria-label="Plot title">
+        <button class="lock-btn" id="titleLock" title="Auto-updating — click to lock">auto</button>
+      </div>
+      <label class="ctrl-label" for="inputXLabel">X label</label>
+      <div class="input-lock-row">
+        <input type="text" class="ctrl-input" id="inputXLabel" placeholder="X axis label…" aria-label="X axis label">
+        <button class="lock-btn" id="xLabelLock" title="Auto-updating — click to lock">auto</button>
+      </div>
+      <label class="ctrl-label" for="inputYLabel">Y label</label>
+      <div class="input-lock-row">
+        <input type="text" class="ctrl-input" id="inputYLabel" placeholder="Y axis label…" aria-label="Y axis label">
+        <button class="lock-btn" id="yLabelLock" title="Auto-updating — click to lock">auto</button>
+      </div>
+      <label class="ctrl-label" for="inputCbarLabel">Colorbar label</label>
+      <div class="input-lock-row">
+        <input type="text" class="ctrl-input" id="inputCbarLabel" placeholder="Color-by label…" aria-label="Colorbar label">
+        <button class="lock-btn" id="cbarLock" title="Auto-updating — click to lock">auto</button>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="renderBtn" onclick="renderPlot()">Render plot</button>
+        <button class="btn" id="downloadBtn" onclick="downloadPlot()" style="display:none">↓ PNG</button>
+        <button class="btn" id="cbarExportBtn" onclick="downloadColorbar()" style="display:none" title="Export colorbar as standalone PNG">↓ Colorbar</button>
+      </div>
+    </div>
+
+    <!-- TYPOGRAPHY + SIZE (collapsible) -->
+    <details class="section" id="typographySection" style="display:none">
+      <summary>Typography &amp; Size</summary>
+      <div class="details-body">
+
+        <label class="ctrl-label">Figure width (px)</label>
+        <div class="slider-row">
+          <input type="range" id="figW" min="400" max="2000" value="800" step="10" aria-label="Figure width">
+          <input type="number" class="slider-num" id="figWVal" value="800" min="400" max="2000" step="10" aria-label="Figure width value">
+        </div>
+
+        <label class="ctrl-label">Figure height (px)</label>
+        <div class="slider-row">
+          <input type="range" id="figH" min="300" max="1400" value="700" step="10" aria-label="Figure height">
+          <input type="number" class="slider-num" id="figHVal" value="700" min="300" max="1400" step="10" aria-label="Figure height value">
+        </div>
+
+        <label class="ctrl-label">Title font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsTitle" min="8" max="48" value="14" step="1" aria-label="Title font size">
+          <input type="number" class="slider-num" id="fsTitleVal" value="14" min="8" max="48" step="1" aria-label="Title font size value">
+        </div>
+
+        <label class="ctrl-label">Axis label font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsAxisLabel" min="8" max="36" value="12" step="1" aria-label="Axis label font size">
+          <input type="number" class="slider-num" id="fsAxisLabelVal" value="12" min="8" max="36" step="1" aria-label="Axis label font size value">
+        </div>
+
+        <label class="ctrl-label">Tick label font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsTick" min="8" max="30" value="10" step="1" aria-label="Tick label font size">
+          <input type="number" class="slider-num" id="fsTickVal" value="10" min="8" max="30" step="1" aria-label="Tick font size value">
+        </div>
+
+        <label class="ctrl-label">Legend font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsLegend" min="8" max="24" value="11" step="1" aria-label="Legend font size">
+          <input type="number" class="slider-num" id="fsLegendVal" value="11" min="8" max="24" step="1" aria-label="Legend font size value">
+        </div>
+
+        <label class="ctrl-label">Stats box font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsAnnot" min="8" max="30" value="12" step="1" aria-label="Stats annotation font size">
+          <input type="number" class="slider-num" id="fsAnnotVal" value="12" min="8" max="30" step="1" aria-label="Stats box font size value">
+        </div>
+
+        <label class="ctrl-label">Colorbar numbers font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsCbarTick" min="8" max="30" value="10" step="1" aria-label="Colorbar tick font size">
+          <input type="number" class="slider-num" id="fsCbarTickVal" value="10" min="8" max="30" step="1" aria-label="Colorbar tick font size value">
+        </div>
+
+        <label class="ctrl-label">Colorbar title font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsCbarTitle" min="8" max="30" value="11" step="1" aria-label="Colorbar title font size">
+          <input type="number" class="slider-num" id="fsCbarTitleVal" value="11" min="8" max="30" step="1" aria-label="Colorbar title font size value">
+        </div>
+
+      </div>
+    </details>
+
+    <!-- STYLE PRESETS -->
+    <div class="section" id="presetSection" style="display:none">
+      <div class="section-title">Style Preset</div>
+      <div class="btn-row">
+        <button class="btn sm" onclick="savePreset()" title="Download current style settings as JSON">↓ Save preset</button>
+        <button class="btn sm" onclick="g('presetFileInput').click()" title="Load style settings from a JSON preset file">↑ Load preset</button>
+        <input type="file" id="presetFileInput" accept=".json" style="display:none" aria-label="Load preset JSON">
+      </div>
+      <div id="presetAlert"></div>
+    </div>
+
+    <!-- SAVE -->
+    <div class="section" id="saveSection" style="display:none">
+      <div class="section-title">Save</div>
+      <button class="btn primary" onclick="savePlot()" style="width:100%">+ Save current plot</button>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">⌗</div>
+      <p>Load two CSV files to begin</p>
+      <p style="font-size:11px;color:var(--text3)">Parity plots · Error bands · Stats · Saved comparisons</p>
+    </div>
+    <div class="plot-area hidden" id="plotArea">
+      <div id="plotDiv"></div>
+    </div>
+    <div class="stats-panel" id="statsPanel">
+      <div class="stats-title">Statistics <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px;">Stats box on plot is draggable</span></div>
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+    <div class="saved-strip" id="savedStrip">
+      <div class="saved-strip-header">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button class="strip-toggle" id="savedStripToggle" onclick="toggleSavedScroll()" title="Collapse / expand" aria-expanded="true" aria-controls="savedScroll">▼</button>
+          <span class="saved-strip-title">Saved plots</span>
+        </div>
+        <button class="btn sm" id="zipBtn" onclick="downloadZip()" title="Download all saved plots as a ZIP of PNGs">↓ ZIP</button>
+      </div>
+      <div class="saved-scroll" id="savedScroll"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* INJECT:SCRIPT */
+</script>
+</body>
+</html>

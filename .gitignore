@@ -1,0 +1,23 @@
+# Claude Code local settings
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (if ever added)
+node_modules/
+
+# Python (if ever added)
+__pycache__/
+*.py[cod]
+.env
+.venv/

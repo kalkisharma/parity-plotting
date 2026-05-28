@@ -5,13 +5,13 @@
 const fs   = require('fs');
 const path = require('path');
 
-const VERSION = '1.0.8';
+const VERSION = '1.0.9';
 
 const ROOT = __dirname;
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 // ── Libraries (escape </script> so the HTML parser doesn't close early) ───
-const libs = ['papaparse.min.js', 'plotly.min.js', 'jszip.min.js']
+const libs = ['papaparse.min.js', 'plotly-cartesian.min.js', 'jszip.min.js']
   .map(name => {
     const content = read(`lib/${name}`).replace(/<\/script>/g, '<\\/script>');
     return `<script>${content}</script>`;

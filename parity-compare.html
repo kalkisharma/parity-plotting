@@ -1,4 +1,4 @@
-<!-- parity-compare 1.0.9
+<!-- parity-compare 1.1.0
      Maintainer: Kalki Sharma <kalkijsharma@gmail.com>
      Source files: src/  |  Build: node build.js
 -->
@@ -1285,7 +1285,9 @@ function band(mn,mx,pct,color,name){
 }
 
 function downloadPlot(){
-  Plotly.downloadImage('plotDiv',{format:'png',width:iv('figW'),height:iv('figH'),filename:'parity_compare'});
+  const raw=sv('inputTitle')||'parity_compare';
+  const filename=raw.replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'_')||'parity_compare';
+  Plotly.downloadImage('plotDiv',{format:'png',width:iv('figW'),height:iv('figH'),filename});
 }
 async function downloadColorbar(){
   if(!state.plotRendered||!state.colorCol)return;

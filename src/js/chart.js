@@ -302,7 +302,9 @@ function band(mn,mx,pct,color,name){
 }
 
 function downloadPlot(){
-  Plotly.downloadImage('plotDiv',{format:'png',width:iv('figW'),height:iv('figH'),filename:'parity_compare'});
+  const raw=sv('inputTitle')||'parity_compare';
+  const filename=raw.replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'_')||'parity_compare';
+  Plotly.downloadImage('plotDiv',{format:'png',width:iv('figW'),height:iv('figH'),filename});
 }
 async function downloadColorbar(){
   if(!state.plotRendered||!state.colorCol)return;

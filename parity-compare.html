@@ -1,4 +1,4 @@
-<!-- parity-compare v1.0.3 -->
+<!-- parity-compare v1.0.4 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -178,7 +178,7 @@
   <div class="logo">PARITY<span>.compare</span></div>
   <div class="divider"></div>
   <div class="header-tag">CSV Dataset Validation Tool</div>
-  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.3</div>
+  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.4</div>
 </header>
 
 <div class="tab-bar" id="tabBar" role="tablist" aria-label="Sessions">
@@ -216,7 +216,7 @@
       <div class="section-title">Join Key</div>
       <label class="ctrl-label" for="keySearch">Unique identifier column</label>
       <div class="search-wrap">
-        <input type="text" id="keySearch" placeholder="Search columns…" autocomplete="off" aria-label="Search identifier column">
+        <input type="text" id="keySearch" placeholder="Search columns…" autocomplete="off" aria-label="Search identifier column" title="The column used to match rows between the two files — must exist in both datasets">
         <button class="dd-clear hidden" id="keyClear" aria-label="Clear join key" title="Clear">×</button>
         <div class="dropdown-list" id="keyDropdown" role="listbox"></div>
       </div>
@@ -783,7 +783,7 @@ function parseCSV(file,cb){
   // skipEmptyLines silently discards blank rows — reported row count may differ from file line count
   Papa.parse(file,{
     header:true,dynamicTyping:true,skipEmptyLines:true,
-    transformHeader:h=>h.replace(/^\uFEFF/,'').trim(),
+    transformHeader:h=>h.replace(/^\uFEFF/,'').replace(/\u00A0/g,' ').trim(),
     complete:cb,error:e=>console.error(e),
   });
 }
@@ -1107,7 +1107,7 @@ function renderPlot(){
       });
     }
   }else{
-    const cats=[...new Set(cV.map(String))].filter(c=>c!=='NaN'&&c!=='');
+    const cats=[...new Set(cV.map(String))].filter(c=>c!=='NaN'&&c!=='').sort();
     if(cats.length>12)g('fileAlerts').innerHTML='<div class="alert warn">Color-by column has >12 categories — colors will repeat.</div>';
     const nanCatIdxs=cV.reduce((a,v,i)=>(!Number.isFinite(v)&&typeof v!=='string')||v===''?[...a,i]:a,[]);
     if(nanCatIdxs.length>0)traces.push({x:nanCatIdxs.map(i=>xV[i]),y:nanCatIdxs.map(i=>yV[i]),mode:'markers',type:'scatter',
@@ -1132,7 +1132,7 @@ function renderPlot(){
       line:{color:sv('bfColor'),dash:sv('bfDash'),width:parseFloat(g('bfWidth').value)},
       name:'Best fit',hoverinfo:'skip',showlegend:true});
   }
-  const fs=v=>isNaN(v)?'N/A':v.toFixed(4);
+  const fs=v=>isNaN(v)?'N/A':(+v).toPrecision(4);
   const annotText=stats
     ?`R² = ${fs(stats.r2p)}<br>MAE = ${fs(stats.mae)}<br>RMSE = ${fs(stats.rmse)}`
     :'No data';
@@ -1278,7 +1278,12 @@ async function downloadColorbar(){
 }
 async function downloadZip(){
   const plots=state.savedPlots.filter(Boolean);
-  if(!plots.length)return;
+  if(!plots.length){
+    const btn=g('zipBtn');
+    btn.textContent='Nothing saved';btn.disabled=true;
+    setTimeout(()=>{btn.textContent='↓ ZIP';btn.disabled=false;},2000);
+    return;
+  }
   const btn=g('zipBtn');
   const orig=btn.textContent;
   btn.disabled=true;
@@ -1489,7 +1494,10 @@ function mkCard(idx,snap,scroll){
       <input class="saved-card-title" type="text" value="${snap.title}" placeholder="Title…" aria-label="Saved plot title" onclick="event.stopPropagation()">
       <button class="saved-del" onclick="delSaved(${idx},event)" aria-label="Delete" title="Delete">×</button>
     </div>`;
+  card.setAttribute('tabindex','0');
+  card.setAttribute('role','button');
   card.addEventListener('click',()=>restorePlot(idx));
+  card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();restorePlot(idx);}});
   card.querySelector('.saved-card-title').addEventListener('input',function(){
     if(state.savedPlots[idx])state.savedPlots[idx].title=this.value;
   });
@@ -1534,7 +1542,7 @@ function renderStats(xV,yV,nan,stats){
   }
   const{n,r2p,rmse,mae,maxE,bias,slope,intc,r2f}=stats;
   const f=(v,d=4)=>isNaN(v)?'N/A':(+v).toPrecision(d);
-  const fs=v=>isNaN(v)?'N/A':v.toFixed(4);
+  const fs=f; // alias — toPrecision handles both tiny and large values
   grid.innerHTML=`
     <div class="stat-card"><div class="stat-label">N matched</div><div class="stat-value">${n}</div></div>
     <div class="stat-card"><div class="stat-label">N excluded (NaN)</div><div class="stat-value muted">${nan}</div></div>
@@ -1727,6 +1735,10 @@ function clearEl(id){g(id).innerHTML='';}
 function debounce(fn,d){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),d);};}
 
 renderTabBar();
+
+window.addEventListener('beforeunload',e=>{
+  if(state.savedPlots.filter(Boolean).length>0){e.preventDefault();e.returnValue='';}
+});
 </script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+<!-- parity-compare v1.0.0 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -57,6 +58,8 @@
   .dd-clear:hover{color:var(--danger);}
   .dd-clear.hidden{display:none!important;}
   .search-wrap input[type=text].has-clear{padding-right:28px;}
+  .search-wrap::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;font-size:12px;line-height:1;}
+  .search-wrap:has(input.has-clear)::after{display:none;}
   .dropdown-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);max-height:180px;overflow-y:auto;z-index:100;display:none;}
   .dropdown-list::-webkit-scrollbar{width:4px;}
   .dropdown-list::-webkit-scrollbar-thumb{background:var(--border2);}
@@ -94,6 +97,10 @@
   input[type=color].edge-color::-webkit-color-swatch-wrapper{padding:0;}
   input[type=color].edge-color::-webkit-color-swatch{border:none;border-radius:4px;}
   .edge-row{display:flex;align-items:center;gap:8px;}
+  .refline-block{display:flex;flex-direction:column;gap:5px;}
+  .refline-sublabel{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
+  .refline-row{display:flex;align-items:center;gap:6px;}
+  .refline-dash{width:62px;flex-shrink:0;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 4px;cursor:pointer;}
   .input-lock-row{display:flex;gap:4px;align-items:center;}
   .input-lock-row .ctrl-input{flex:1;min-width:0;}
   .lock-btn{flex-shrink:0;background:rgba(91,141,238,0.08);border:1px solid rgba(91,141,238,0.3);border-radius:var(--radius);color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:0.06em;cursor:pointer;padding:5px 7px;line-height:1;transition:all 0.15s;}
@@ -110,6 +117,10 @@
   .alert.warn{background:rgba(232,160,74,0.1);border:1px solid rgba(232,160,74,0.3);color:var(--warn);}
   .alert.danger{background:rgba(224,92,92,0.1);border:1px solid rgba(224,92,92,0.3);color:var(--danger);}
   .alert.success{background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);color:var(--success);}
+  .drop-details{font-size:11px;color:var(--text2);margin-top:4px;}
+  .drop-details summary{cursor:pointer;color:var(--text3);padding:2px 0;}
+  .drop-list{padding:4px 6px;background:var(--panel);border-radius:4px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;}
+  .drop-list code{background:var(--bg);padding:1px 4px;border-radius:3px;font-size:10px;color:var(--text2);}
   .right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
   .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--text3);}
   .empty-icon{width:64px;height:64px;border:2px dashed var(--border2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;}
@@ -167,6 +178,7 @@
   <div class="logo">PARITY<span>.compare</span></div>
   <div class="divider"></div>
   <div class="header-tag">CSV Dataset Validation Tool</div>
+  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.0</div>
 </header>
 
 <div class="tab-bar" id="tabBar" role="tablist" aria-label="Sessions">
@@ -286,6 +298,39 @@
       <div class="check-row">
         <label title="±5%: shaded region where |y − x| / |x| ≤ 5%"><input type="checkbox" id="band5" aria-label="5% error band"> ±5% ⓘ</label>
         <label title="±10%: shaded region where |y − x| / |x| ≤ 10%"><input type="checkbox" id="band10" checked aria-label="10% error band"> ±10% ⓘ</label>
+        <label title="Draw linear regression line (y = mx + b)"><input type="checkbox" id="showBestFit" aria-label="Best-fit line"> Best-fit line</label>
+      </div>
+
+      <label class="ctrl-label">Reference lines</label>
+      <div class="refline-block">
+        <div class="refline-sublabel">y = x</div>
+        <div class="refline-row">
+          <input type="color" class="edge-color" id="parityColor" value="#555555" aria-label="Parity line color" title="Parity line color">
+          <div class="slider-row" style="flex:1">
+            <input type="range" id="parityWidth" min="0.5" max="5" value="1.5" step="0.5" aria-label="Parity line width">
+            <span class="slider-val" id="parityWidthVal">1.5</span>
+          </div>
+          <select class="refline-dash" id="parityDash" aria-label="Parity line style">
+            <option value="solid">─ solid</option>
+            <option value="dash" selected>-- dash</option>
+            <option value="dot">·· dot</option>
+            <option value="dashdot">-· mix</option>
+          </select>
+        </div>
+        <div class="refline-sublabel">Best fit</div>
+        <div class="refline-row">
+          <input type="color" class="edge-color" id="bfColor" value="#dc2626" aria-label="Best-fit line color" title="Best-fit line color">
+          <div class="slider-row" style="flex:1">
+            <input type="range" id="bfWidth" min="0.5" max="5" value="1.5" step="0.5" aria-label="Best-fit line width">
+            <span class="slider-val" id="bfWidthVal">1.5</span>
+          </div>
+          <select class="refline-dash" id="bfDash" aria-label="Best-fit line style">
+            <option value="solid" selected>─ solid</option>
+            <option value="dash">-- dash</option>
+            <option value="dot">·· dot</option>
+            <option value="dashdot">-· mix</option>
+          </select>
+        </div>
       </div>
 
       <label class="ctrl-label">Gridlines</label>
@@ -310,9 +355,15 @@
         <button class="lock-btn" id="titleLock" title="Auto-updating — click to lock">auto</button>
       </div>
       <label class="ctrl-label" for="inputXLabel">X label</label>
-      <input type="text" class="ctrl-input" id="inputXLabel" placeholder="X axis label…" aria-label="X axis label">
+      <div class="input-lock-row">
+        <input type="text" class="ctrl-input" id="inputXLabel" placeholder="X axis label…" aria-label="X axis label">
+        <button class="lock-btn" id="xLabelLock" title="Auto-updating — click to lock">auto</button>
+      </div>
       <label class="ctrl-label" for="inputYLabel">Y label</label>
-      <input type="text" class="ctrl-input" id="inputYLabel" placeholder="Y axis label…" aria-label="Y axis label">
+      <div class="input-lock-row">
+        <input type="text" class="ctrl-input" id="inputYLabel" placeholder="Y axis label…" aria-label="Y axis label">
+        <button class="lock-btn" id="yLabelLock" title="Auto-updating — click to lock">auto</button>
+      </div>
       <label class="ctrl-label" for="inputCbarLabel">Colorbar label</label>
       <div class="input-lock-row">
         <input type="text" class="ctrl-input" id="inputCbarLabel" placeholder="Color-by label…" aria-label="Colorbar label">
@@ -452,6 +503,8 @@ const state={
   figInited:false, // true after first render sets slider defaults from DOM
   titleLocked:false,
   cbarLocked:false,
+  xLabelLocked:false,
+  yLabelLocked:false,
 };
 const plotState={data:[],layout:{},meta:{}};
 
@@ -466,8 +519,10 @@ function buildDefaultUI(){
     colBSearch__selVal:undefined,colorSearch__selVal:undefined,
     inputTitle:'',inputXLabel:'',inputYLabel:'',inputCbarLabel:'',
     xMin:'',xMax:'',yMin:'',yMax:'',
-    showColorbar:true,band5:false,band10:true,majorGrid:true,minorGrid:false,
+    showColorbar:true,band5:false,band10:true,showBestFit:false,majorGrid:true,minorGrid:false,
     markerSize:'7',markerOpacity:'88',cbarThickness:'22',edgeWidth:'1',edgeColor:'#000000',
+    parityColor:'#555555',parityWidth:'1.5',parityDash:'dash',
+    bfColor:'#dc2626',bfWidth:'1.5',bfDash:'solid',
     figW:'800',figH:'700',
     fsTitle:'14',fsAxisLabel:'12',fsTick:'10',fsLegend:'11',
     fsAnnot:'12',fsCbarTick:'10',fsCbarTitle:'11',
@@ -482,6 +537,7 @@ function buildDefaultUI(){
     statusB_text:'Drop CSV or click to browse',statusB_cls:'dz-status',
     fileAlerts:'',joinAlerts:'',rangeAlerts:'',statsGrid:'',
     markerSizeVal:'7',markerOpacityVal:'88%',cbarThicknessVal:'22',edgeWidthVal:'1.0',
+    parityWidthVal:'1.5',bfWidthVal:'1.5',
     figWVal:'800',figHVal:'700',
     fsTitleVal:'14',fsAxisLabelVal:'12',fsTickVal:'10',fsLegendVal:'11',
     fsAnnotVal:'12',fsCbarTickVal:'10',fsCbarTitleVal:'11',
@@ -500,7 +556,7 @@ function createFreshSession(name){
       colorCol:null,colorSource:null,
       plotRendered:false,savedPlots:[],
       annotPos:null,figInited:false,
-      titleLocked:false,cbarLocked:false,
+      titleLocked:false,cbarLocked:false,xLabelLocked:false,yLabelLocked:false,
       _fileA:null,_fileB:null,
     },
     plotState:{data:[],layout:{},meta:{}},
@@ -518,14 +574,17 @@ function snapshotUI(){
     const el=g(id);if(!el)return;
     snap[id]=el.value;snap[id+'__selVal']=el._selVal;
   });
-  ['showColorbar','band5','band10','majorGrid','minorGrid'].forEach(id=>{
+  ['showColorbar','band5','band10','showBestFit','majorGrid','minorGrid'].forEach(id=>{
     const el=g(id);if(el)snap[id]=el.checked;
   });
   ['markerSize','markerOpacity','cbarThickness','edgeWidth','figW','figH',
-   'fsTitle','fsAxisLabel','fsTick','fsLegend','fsAnnot','fsCbarTick','fsCbarTitle'].forEach(id=>{
+   'fsTitle','fsAxisLabel','fsTick','fsLegend','fsAnnot','fsCbarTick','fsCbarTitle',
+   'parityWidth','bfWidth'].forEach(id=>{
     const el=g(id);if(el)snap[id]=el.value;
   });
   snap.cmapSelect=g('cmapSelect').value;snap.edgeColor=g('edgeColor').value;
+  snap.parityColor=g('parityColor').value;snap.parityDash=g('parityDash').value;
+  snap.bfColor=g('bfColor').value;snap.bfDash=g('bfDash').value;
   ['joinSection','colSection','ctrlSection','typographySection','presetSection','saveSection','showCbarRow'].forEach(id=>{
     snap['vis_'+id]=g(id)?g(id).style.display:'none';
   });
@@ -540,7 +599,8 @@ function snapshotUI(){
   snap.fileAlerts=g('fileAlerts').innerHTML;snap.joinAlerts=g('joinAlerts').innerHTML;
   snap.rangeAlerts=g('rangeAlerts').innerHTML;snap.statsGrid=g('statsGrid').innerHTML;
   ['markerSizeVal','markerOpacityVal','cbarThicknessVal','edgeWidthVal','figWVal','figHVal',
-   'fsTitleVal','fsAxisLabelVal','fsTickVal','fsLegendVal','fsAnnotVal','fsCbarTickVal','fsCbarTitleVal'].forEach(id=>{
+   'fsTitleVal','fsAxisLabelVal','fsTickVal','fsLegendVal','fsAnnotVal','fsCbarTickVal','fsCbarTitleVal',
+   'parityWidthVal','bfWidthVal'].forEach(id=>{
     const el=g(id);if(el)snap[id]=el.tagName==='INPUT'?el.value:el.textContent;
   });
   snap.renderBtnText=g('renderBtn').textContent;
@@ -585,15 +645,20 @@ function restoreSessionUI(session){
     el._selVal=ui[id+'__selVal'];
     el.dataset.selected=(ui[id+'__selVal']!=null)?ui[id+'__selVal']:'';
   });
-  ['showColorbar','band5','band10','majorGrid','minorGrid'].forEach(id=>{
+  ['showColorbar','band5','band10','showBestFit','majorGrid','minorGrid'].forEach(id=>{
     const el=g(id);if(el&&ui[id]!==undefined)el.checked=ui[id];
   });
-  ['markerSize','cbarThickness','edgeWidth','figW','figH',
-   'fsTitle','fsAxisLabel','fsTick','fsLegend','fsAnnot','fsCbarTick','fsCbarTitle'].forEach(id=>{
+  ['markerSize','markerOpacity','cbarThickness','edgeWidth','figW','figH',
+   'fsTitle','fsAxisLabel','fsTick','fsLegend','fsAnnot','fsCbarTick','fsCbarTitle',
+   'parityWidth','bfWidth'].forEach(id=>{
     const el=g(id);if(el&&ui[id]!==undefined)el.value=ui[id];
   });
   if(g('cmapSelect'))g('cmapSelect').value=ui.cmapSelect||'Coolwarm';
   if(g('edgeColor'))g('edgeColor').value=ui.edgeColor||'#000000';
+  if(g('parityColor'))g('parityColor').value=ui.parityColor||'#555555';
+  if(g('parityDash'))g('parityDash').value=ui.parityDash||'dash';
+  if(g('bfColor'))g('bfColor').value=ui.bfColor||'#dc2626';
+  if(g('bfDash'))g('bfDash').value=ui.bfDash||'solid';
   ['joinSection','colSection','ctrlSection','typographySection','presetSection','saveSection','showCbarRow'].forEach(id=>{
     const el=g(id);if(el)el.style.display=ui['vis_'+id]??'none';
   });
@@ -611,7 +676,8 @@ function restoreSessionUI(session){
   g('rangeAlerts').innerHTML=ui.rangeAlerts||'';
   g('statsGrid').innerHTML=ui.statsGrid||'';
   ['markerSizeVal','markerOpacityVal','cbarThicknessVal','edgeWidthVal','figWVal','figHVal',
-   'fsTitleVal','fsAxisLabelVal','fsTickVal','fsLegendVal','fsAnnotVal','fsCbarTickVal','fsCbarTitleVal'].forEach(id=>{
+   'fsTitleVal','fsAxisLabelVal','fsTickVal','fsLegendVal','fsAnnotVal','fsCbarTickVal','fsCbarTitleVal',
+   'parityWidthVal','bfWidthVal'].forEach(id=>{
     const el=g(id);if(el&&ui[id]){if(el.tagName==='INPUT')el.value=ui[id];else el.textContent=ui[id];}
   });
   g('renderBtn').textContent=ui.renderBtnText||'Render plot';
@@ -619,7 +685,7 @@ function restoreSessionUI(session){
   if(state.rawA&&state.rawB){buildKeyDropdown();if(state.joinKey)buildColDropdowns();}
   // Sync clear buttons and lock UIs
   ['keySearch','colASearch','colBSearch','colorSearch'].forEach(id=>g(id)?._syncClear?.());
-  updateTitleLockUi();updateCbarLockUi();
+  updateTitleLockUi();updateCbarLockUi();updateXLabelLockUi();updateYLabelLockUi();
   // Rebuild saved plots strip
   g('savedScroll').innerHTML='';
   state.savedPlots.forEach((snap,i)=>{if(snap)mkCard(i,snap,false);});
@@ -724,9 +790,10 @@ function nk(v){return String(v??'').trim().toLowerCase();}
 function innerJoin(A,B,key){
   const map=new Map();
   for(const r of B){const k=nk(r[key]);if(!map.has(k))map.set(k,r);}
-  const mA=[],mB=[],used=new Set();
-  for(const r of A){const k=nk(r[key]);if(map.has(k)&&!used.has(k)){mA.push(r);mB.push(map.get(k));used.add(k);}}
-  return{mA,mB,nA:A.length,nB:B.length};
+  const mA=[],mB=[],used=new Set(),dropA=[],dropB=[];
+  for(const r of A){const k=nk(r[key]);if(map.has(k)&&!used.has(k)){mA.push(r);mB.push(map.get(k));used.add(k);}else dropA.push(r[key]);}
+  for(const r of B){const k=nk(r[key]);if(!used.has(k))dropB.push(r[key]);}
+  return{mA,mB,nA:A.length,nB:B.length,dropA,dropB};
 }
 function dupKeys(rows,key){
   const seen=new Set(),d=[];
@@ -755,6 +822,8 @@ function resetForNewFiles(){
   g('renderBtn').textContent='Render plot';
   state.titleLocked=false;updateTitleLockUi();
   state.cbarLocked=false;updateCbarLockUi();
+  state.xLabelLocked=false;updateXLabelLockUi();
+  state.yLabelLocked=false;updateYLabelLockUi();
 }
 function onBothLoaded(){
   resetForNewFiles();
@@ -767,13 +836,15 @@ function onBothLoaded(){
 function doJoin(){
   if(!state.joinKey)return;
   const dA=dupKeys(state.rawA,state.joinKey),dB=dupKeys(state.rawB,state.joinKey);
-  const{mA,mB,nA,nB}=innerJoin(state.rawA,state.rawB,state.joinKey);
+  const{mA,mB,nA,nB,dropA,dropB}=innerJoin(state.rawA,state.rawB,state.joinKey);
   state.joinedA=mA;state.joinedB=mB;
   const n=mA.length;
   let html='';
   if(dA.length)html+=`<div class="alert warn">Duplicate keys in [A]: ${dA.slice(0,5).join(', ')}${dA.length>5?' …':''}</div>`;
   if(dB.length)html+=`<div class="alert warn">Duplicate keys in [B]: ${dB.slice(0,5).join(', ')}${dB.length>5?' …':''}</div>`;
   html+=`<div class="alert ${n===0?'danger':'success'}">${n===0?'No rows matched. Check identifier column values.':`Matched ${n} of ${nA} rows from [A], ${n} of ${nB} rows from [B]`}</div>`;
+  if(dropA.length){const preview=dropA.slice(0,8).map(v=>`<code>${escHtml(String(v))}</code>`).join(' ');html+=`<details class="drop-details"><summary>${dropA.length} unmatched key${dropA.length===1?'':'s'} in [A]</summary><div class="drop-list">${preview}${dropA.length>8?` <span>… +${dropA.length-8} more</span>`:''}</div></details>`;}
+  if(dropB.length){const preview=dropB.slice(0,8).map(v=>`<code>${escHtml(String(v))}</code>`).join(' ');html+=`<details class="drop-details"><summary>${dropB.length} unmatched key${dropB.length===1?'':'s'} in [B]</summary><div class="drop-list">${preview}${dropB.length>8?` <span>… +${dropB.length-8} more</span>`:''}</div></details>`;}
   g('joinAlerts').innerHTML=html;
   if(n>0){
     g('colSection').style.display='';
@@ -807,6 +878,7 @@ function makeDD(inputId,ddId,items,onSel){
   inp.addEventListener('focus',()=>{render(inp.value);dd.classList.add('open');},{signal:sig});
   inp.addEventListener('input',()=>render(inp.value),{signal:sig});
   inp.addEventListener('blur',()=>setTimeout(()=>dd.classList.remove('open'),150),{signal:sig});
+  inp._openDD=()=>{render('');dd.classList.add('open');};
 }
 function lbl(col,src){return`[${src==='A'?state.nameA:state.nameB}] ${col}`;}
 function buildKeyDropdown(){
@@ -823,8 +895,8 @@ function buildKeyDropdown(){
 function buildColDropdowns(){
   const cA=state.headersA.map(c=>({value:c+'\x00A',col:c,label:lbl(c,'A'),src:'A'}));
   const cB=state.headersB.map(c=>({value:c+'\x00B',col:c,label:lbl(c,'B'),src:'B'}));
-  makeDD('colASearch','colADropdown',cA,(val)=>{state.colA=val.split('\x00')[0];setAxisDefaults();g('colASearch')._syncClear?.();if(state.colA&&state.colB)g('ctrlSection').style.display='';if(state.plotRendered)renderPlot();});
-  makeDD('colBSearch','colBDropdown',cB,(val)=>{state.colB=val.split('\x00')[0];setAxisDefaults();g('colBSearch')._syncClear?.();if(state.colA&&state.colB)g('ctrlSection').style.display='';if(state.plotRendered)renderPlot();});
+  makeDD('colASearch','colADropdown',cA,(val)=>{state.colA=val.split('\x00')[0];setAxisDefaults();g('colASearch')._syncClear?.();if(state.colA&&state.colB){g('ctrlSection').style.display='';renderPlot();}});
+  makeDD('colBSearch','colBDropdown',cB,(val)=>{state.colB=val.split('\x00')[0];setAxisDefaults();g('colBSearch')._syncClear?.();if(state.colA&&state.colB){g('ctrlSection').style.display='';renderPlot();}});
   makeDD('colorSearch','colorDropdown',[...cA,...cB],(val,src)=>{state.colorCol=val.split('\x00')[0];state.colorSource=src;setCbarDefault();g('colorSearch')._syncClear?.();if(state.plotRendered)renderPlot();});
 }
 function autoTitle(){return state.colA&&state.colB?`${state.colA} vs ${state.colB}`:'Parity Comparison';}
@@ -836,9 +908,25 @@ function updateTitleLockUi(){
   btn.title=state.titleLocked?'Locked — click to auto-update':'Auto-updating — click to lock';
   btn.setAttribute('aria-pressed',String(state.titleLocked));
 }
+function syncXLabel(){if(!state.xLabelLocked&&state.colA)g('inputXLabel').value=`[${state.nameA}] ${state.colA}`;}
+function updateXLabelLockUi(){
+  const btn=g('xLabelLock');if(!btn)return;
+  btn.textContent=state.xLabelLocked?'lock':'auto';
+  btn.classList.toggle('locked',state.xLabelLocked);
+  btn.title=state.xLabelLocked?'Locked — click to auto-update':'Auto-updating — click to lock';
+  btn.setAttribute('aria-pressed',String(state.xLabelLocked));
+}
+function syncYLabel(){if(!state.yLabelLocked&&state.colB)g('inputYLabel').value=`[${state.nameB}] ${state.colB}`;}
+function updateYLabelLockUi(){
+  const btn=g('yLabelLock');if(!btn)return;
+  btn.textContent=state.yLabelLocked?'lock':'auto';
+  btn.classList.toggle('locked',state.yLabelLocked);
+  btn.title=state.yLabelLocked?'Locked — click to auto-update':'Auto-updating — click to lock';
+  btn.setAttribute('aria-pressed',String(state.yLabelLocked));
+}
 function setAxisDefaults(){
-  if(state.colA&&!g('inputXLabel').value)g('inputXLabel').value=`[${state.nameA}] ${state.colA}`;
-  if(state.colB&&!g('inputYLabel').value)g('inputYLabel').value=`[${state.nameB}] ${state.colB}`;
+  syncXLabel();
+  syncYLabel();
   syncTitle();
 }
 function syncCbar(){if(!state.cbarLocked)g('inputCbarLabel').value=state.colorCol||'';}
@@ -962,11 +1050,11 @@ function renderPlot(){
   // Traces
   const traces=[{
     x:[bandMn,bandMx],y:[bandMn,bandMx],
-    mode:'lines',line:{color:'#555555',dash:'dash',width:1.5},
+    mode:'lines',line:{color:sv('parityColor'),dash:sv('parityDash'),width:parseFloat(g('parityWidth').value)},
     name:'y = x',hoverinfo:'skip',showlegend:true,
   }];
-  if(cb('band5')) traces.push(band(bandMn,bandMx,0.05,'#22a34a','±5%'));
-  if(cb('band10'))traces.push(band(bandMn,bandMx,0.10,'#d97706','±10%'));
+  if(cb('band5')) traces.push(...band(bandMn,bandMx,0.05,'#22a34a','±5%'));
+  if(cb('band10'))traces.push(...band(bandMn,bandMx,0.10,'#d97706','±10%'));
 
   const isNumC=state.colorCol&&isNum(cV);
   const baseMarker={size:iv('markerSize'),opacity:iv('markerOpacity')/100,line:{color:edgeW>0?edgeC:'rgba(0,0,0,0)',width:edgeW}};
@@ -974,20 +1062,33 @@ function renderPlot(){
     const mk={...baseMarker};
     if(isNumC){
       const showCbar=cb('showColorbar');
-      mk.color=cV;mk.colorscale=sv('cmapSelect');mk.showscale=showCbar;
+      const finIdxs=[],nanIdxs=[];
+      cV.forEach((v,i)=>(Number.isFinite(v)?finIdxs:nanIdxs).push(i));
+      if(nanIdxs.length>0){
+        g('rangeAlerts').innerHTML+='<div class="alert warn">'+nanIdxs.length+' point'+(nanIdxs.length===1?'':'s')+' ha'+(nanIdxs.length===1?'s':'ve')+' no color data and are shown in gray.</div>';
+        traces.push({x:nanIdxs.map(i=>xV[i]),y:nanIdxs.map(i=>yV[i]),mode:'markers',type:'scatter',
+          name:'No color data',marker:{...baseMarker,color:'#888888'},
+          hovertemplate:'No color data<br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>'});
+      }
+      mk.color=finIdxs.map(i=>cV[i]);mk.colorscale=sv('cmapSelect');mk.showscale=showCbar;
       if(showCbar)mk.colorbar={
         title:{text:sv('inputCbarLabel')||state.colorCol,font:{size:fsCT,color:'#333333'}},
         tickfont:{size:fsCt,color:'#333333',family:'JetBrains Mono,monospace'},
         bgcolor:'#ffffff',outlinecolor:'#cccccc',outlinewidth:1,thickness:cbW,
       };
+      traces.push({
+        x:finIdxs.map(i=>xV[i]),y:finIdxs.map(i=>yV[i]),mode:'markers',type:'scatter',
+        marker:mk,name:'Data',
+        hovertemplate:'X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>',
+      });
     }else{
       mk.color='#2563eb';
+      traces.push({
+        x:xV,y:yV,mode:'markers',type:'scatter',
+        marker:mk,name:'Data',
+        hovertemplate:'X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>',
+      });
     }
-    traces.push({
-      x:xV,y:yV,mode:'markers',type:'scatter',
-      marker:mk,name:'Data',
-      hovertemplate:'X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>',
-    });
   }else{
     const cats=[...new Set(cV.map(String))];
     if(cats.length>12)g('fileAlerts').innerHTML='<div class="alert warn">Color-by column has >12 categories — colors will repeat.</div>';
@@ -1004,6 +1105,12 @@ function renderPlot(){
 
   // Stats annotation
   const stats=computeStats(xV,yV);
+  if(cb('showBestFit')&&stats&&stats.n>=3){
+    const bfY0=stats.slope*bandMn+stats.intc,bfY1=stats.slope*bandMx+stats.intc;
+    traces.push({x:[bandMn,bandMx],y:[bfY0,bfY1],mode:'lines',
+      line:{color:sv('bfColor'),dash:sv('bfDash'),width:parseFloat(g('bfWidth').value)},
+      name:'Best fit',hoverinfo:'skip',showlegend:true});
+  }
   const fs=v=>isNaN(v)?'N/A':v.toFixed(4);
   const annotText=stats
     ?`R² = ${fs(stats.r2p)}<br>MAE = ${fs(stats.mae)}<br>RMSE = ${fs(stats.rmse)}`
@@ -1090,20 +1197,22 @@ function renderPlot(){
 }
 
 function band(mn,mx,pct,color,name){
-  let xs,ys;
+  const props={fill:'toself',fillcolor:color+'22',line:{color,width:1,dash:'dot'},mode:'lines',hoverinfo:'skip'};
   if(mn>=0){
-    xs=[mn,mx,mx,mn,mn];
-    ys=[mn*(1+pct),mx*(1+pct),mx*(1-pct),mn*(1-pct),mn*(1+pct)];
+    return[{...props,name,
+      x:[mn,mx,mx,mn,mn],
+      y:[mn*(1+pct),mx*(1+pct),mx*(1-pct),mn*(1-pct),mn*(1+pct)]}];
   }else if(mx<=0){
-    // all negative: upper boundary is x*(1-pct), lower is x*(1+pct)
-    xs=[mn,mx,mx,mn,mn];
-    ys=[mn*(1-pct),mx*(1-pct),mx*(1+pct),mn*(1+pct),mn*(1-pct)];
+    return[{...props,name,
+      x:[mn,mx,mx,mn,mn],
+      y:[mn*(1-pct),mx*(1-pct),mx*(1+pct),mn*(1+pct),mn*(1-pct)]}];
   }else{
-    // spans zero: two kite regions meeting at origin
-    xs=[mn,0,mx,mx,0,mn,mn];
-    ys=[mn*(1-pct),0,mx*(1+pct),mx*(1-pct),0,mn*(1+pct),mn*(1-pct)];
+    // spans zero: two separate triangles to avoid self-intersecting polygon
+    return[
+      {...props,name,showlegend:false,x:[mn,0,mn,mn],y:[mn*(1-pct),0,mn*(1+pct),mn*(1-pct)]},
+      {...props,name,x:[0,mx,mx,0],y:[0,mx*(1+pct),mx*(1-pct),0]},
+    ];
   }
-  return{x:xs,y:ys,fill:'toself',fillcolor:color+'22',line:{color,width:1,dash:'dot'},mode:'lines',name,hoverinfo:'skip'};
 }
 
 function downloadPlot(){
@@ -1187,6 +1296,13 @@ function savePreset(){
     colorbar_thickness:iv('cbarThickness'),
     show_band_5pct:cb('band5'),
     show_band_10pct:cb('band10'),
+    show_best_fit:cb('showBestFit'),
+    parity_line_color:sv('parityColor'),
+    parity_line_width:parseFloat(g('parityWidth').value),
+    parity_line_dash:sv('parityDash'),
+    bestfit_line_color:sv('bfColor'),
+    bestfit_line_width:parseFloat(g('bfWidth').value),
+    bestfit_line_dash:sv('bfDash'),
     show_major_grid:cb('majorGrid'),
     show_minor_grid:cb('minorGrid'),
     fig_width_px:iv('figW'),
@@ -1237,6 +1353,9 @@ function loadPreset(file){
     sl('edgeWidth','edgeWidthVal','float1',p.marker_edge_width);
     sl('cbarThickness','cbarThicknessVal','int',p.colorbar_thickness);
     sc('band5',p.show_band_5pct);sc('band10',p.show_band_10pct);
+    sc('showBestFit',p.show_best_fit);
+    ss('parityColor',p.parity_line_color);sl('parityWidth','parityWidthVal','float1',p.parity_line_width);ss('parityDash',p.parity_line_dash);
+    ss('bfColor',p.bestfit_line_color);sl('bfWidth','bfWidthVal','float1',p.bestfit_line_width);ss('bfDash',p.bestfit_line_dash);
     sc('majorGrid',p.show_major_grid);sc('minorGrid',p.show_minor_grid);
     sl('figW','figWVal','px',p.fig_width_px);sl('figH','figHVal','px',p.fig_height_px);
     sl('fsTitle','fsTitleVal','int',p.font_size_title);
@@ -1252,8 +1371,8 @@ function loadPreset(file){
     if(p.axis_y_min!=null)g('yMin').value=p.axis_y_min;
     if(p.axis_y_max!=null)g('yMax').value=p.axis_y_max;
     if(p.plot_title!=null){g('inputTitle').value=p.plot_title;if(p.plot_title){state.titleLocked=true;updateTitleLockUi();}}
-    if(p.label_x_axis!=null)g('inputXLabel').value=p.label_x_axis;
-    if(p.label_y_axis!=null)g('inputYLabel').value=p.label_y_axis;
+    if(p.label_x_axis!=null){g('inputXLabel').value=p.label_x_axis;if(p.label_x_axis){state.xLabelLocked=true;updateXLabelLockUi();}}
+    if(p.label_y_axis!=null){g('inputYLabel').value=p.label_y_axis;if(p.label_y_axis){state.yLabelLocked=true;updateYLabelLockUi();}}
     if(p.label_colorbar!=null){g('inputCbarLabel').value=p.label_colorbar;if(p.label_colorbar){state.cbarLocked=true;updateCbarLockUi();}}
     if(state.plotRendered)renderPlot();
   };
@@ -1261,7 +1380,7 @@ function loadPreset(file){
 }
 
 // Control re-render wiring
-['cmapSelect','band5','band10','majorGrid','minorGrid','showColorbar'].forEach(id=>{
+['cmapSelect','band5','band10','showBestFit','majorGrid','minorGrid','showColorbar','parityDash','bfDash'].forEach(id=>{
   g(id)&&g(id).addEventListener('change',()=>{if(state.plotRendered)renderPlot();});
 });
 ['inputTitle','inputXLabel','inputYLabel','inputCbarLabel'].forEach(id=>{
@@ -1273,6 +1392,8 @@ function loadPreset(file){
   g(id)&&g(id).addEventListener('change',()=>{if(state.plotRendered)renderPlot();});
 });
 g('edgeColor').addEventListener('input',()=>{if(state.plotRendered)renderPlot();});
+g('parityColor').addEventListener('input',()=>{if(state.plotRendered)renderPlot();});
+g('bfColor').addEventListener('input',()=>{if(state.plotRendered)renderPlot();});
 
 // Sliders
 [
@@ -1280,6 +1401,8 @@ g('edgeColor').addEventListener('input',()=>{if(state.plotRendered)renderPlot();
   ['markerOpacity','markerOpacityVal','pct'],
   ['cbarThickness','cbarThicknessVal','int'],
   ['edgeWidth','edgeWidthVal','float1'],
+  ['parityWidth','parityWidthVal','float1'],
+  ['bfWidth','bfWidthVal','float1'],
   ['figW','figWVal','px'],
   ['figH','figHVal','px'],
   ['fsTitle','fsTitleVal','int'],
@@ -1367,7 +1490,8 @@ function restorePlot(idx){
     renderStats(snap.meta.xV,snap.meta.yV,snap.meta.nan,snap.meta.stats);
   }
   g('statsPanel').style.display='';
-  document.querySelectorAll('.saved-card').forEach((c,i)=>c.classList.toggle('active-card',i===idx));
+  document.querySelectorAll('.saved-card').forEach(c=>c.classList.remove('active-card'));
+  g(`saved-card-${idx}`)?.classList.add('active-card');
   g('downloadBtn').style.display='';
 }
 function delSaved(idx,e){
@@ -1426,13 +1550,13 @@ const _rerender=debounce(()=>{if(state.plotRendered)renderPlot();},350);
 g('nameA').addEventListener('input',function(){
   const prev=state.nameA;state.nameA=this.value||'Dataset A';
   const xl=g('inputXLabel');
-  if(state.colA&&xl.value===`[${prev}] ${state.colA}`)xl.value=`[${state.nameA}] ${state.colA}`;
+  if(state.colA&&!state.xLabelLocked&&xl.value===`[${prev}] ${state.colA}`)xl.value=`[${state.nameA}] ${state.colA}`;
   _rebuildCols();_rerender();
 });
 g('nameB').addEventListener('input',function(){
   const prev=state.nameB;state.nameB=this.value||'Dataset B';
   const yl=g('inputYLabel');
-  if(state.colB&&yl.value===`[${prev}] ${state.colB}`)yl.value=`[${state.nameB}] ${state.colB}`;
+  if(state.colB&&!state.yLabelLocked&&yl.value===`[${prev}] ${state.colB}`)yl.value=`[${state.nameB}] ${state.colB}`;
   _rebuildCols();_rerender();
 });
 
@@ -1447,6 +1571,28 @@ g('inputTitle').addEventListener('input',()=>{
   if(!state.titleLocked){state.titleLocked=true;updateTitleLockUi();}
 });
 updateTitleLockUi();
+
+// X label lock button
+g('xLabelLock').addEventListener('click',()=>{
+  state.xLabelLocked=!state.xLabelLocked;
+  updateXLabelLockUi();
+  if(!state.xLabelLocked){syncXLabel();if(state.plotRendered)renderPlot();}
+});
+g('inputXLabel').addEventListener('input',()=>{
+  if(!state.xLabelLocked){state.xLabelLocked=true;updateXLabelLockUi();}
+});
+updateXLabelLockUi();
+
+// Y label lock button
+g('yLabelLock').addEventListener('click',()=>{
+  state.yLabelLocked=!state.yLabelLocked;
+  updateYLabelLockUi();
+  if(!state.yLabelLocked){syncYLabel();if(state.plotRendered)renderPlot();}
+});
+g('inputYLabel').addEventListener('input',()=>{
+  if(!state.yLabelLocked){state.yLabelLocked=true;updateYLabelLockUi();}
+});
+updateYLabelLockUi();
 
 // Colorbar label lock button
 g('cbarLock').addEventListener('click',()=>{
@@ -1473,6 +1619,7 @@ g('presetFileInput').addEventListener('change',function(){loadPreset(this.files[
     state.colorCol=null;state.colorSource=null;
     syncCbar();
     syncClear();
+    inp._openDD?.();
     if(state.plotRendered)renderPlot();
   });
   // expose so makeDD onSel can trigger it after selection
@@ -1496,6 +1643,7 @@ g('presetFileInput').addEventListener('change',function(){loadPreset(this.files[
     ['colSection','ctrlSection','typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='none');
     if(state.plotRendered){state.plotRendered=false;g('plotArea').classList.add('hidden');g('emptyState').classList.remove('hidden');g('statsPanel').style.display='none';g('downloadBtn').style.display='none';g('showCbarRow').style.display='none';g('cbarExportBtn').style.display='none';g('renderBtn').textContent='Render plot';}
     syncClear();
+    inp._openDD?.();
   });
   inp.addEventListener('input',syncClear);
   inp.addEventListener('focus',syncClear);
@@ -1515,6 +1663,7 @@ g('presetFileInput').addEventListener('change',function(){loadPreset(this.files[
     ['ctrlSection','typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='none');
     if(state.plotRendered){state.plotRendered=false;g('plotArea').classList.add('hidden');g('emptyState').classList.remove('hidden');g('statsPanel').style.display='none';g('downloadBtn').style.display='none';g('showCbarRow').style.display='none';g('cbarExportBtn').style.display='none';g('renderBtn').textContent='Render plot';}
     syncClear();
+    inp._openDD?.();
   });
   inp.addEventListener('input',syncClear);
   inp.addEventListener('focus',syncClear);
@@ -1534,6 +1683,7 @@ g('presetFileInput').addEventListener('change',function(){loadPreset(this.files[
     ['ctrlSection','typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='none');
     if(state.plotRendered){state.plotRendered=false;g('plotArea').classList.add('hidden');g('emptyState').classList.remove('hidden');g('statsPanel').style.display='none';g('downloadBtn').style.display='none';g('showCbarRow').style.display='none';g('cbarExportBtn').style.display='none';g('renderBtn').textContent='Render plot';}
     syncClear();
+    inp._openDD?.();
   });
   inp.addEventListener('input',syncClear);
   inp.addEventListener('focus',syncClear);

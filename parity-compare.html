@@ -1,9 +1,13 @@
-<!-- parity-compare v1.0.6 -->
+<!-- parity-compare v1.0.6
+     Maintainer: Kalki <6hsz2cxs5w@privaterelay.appleid.com>
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Kalki">
+<meta name="contact" content="6hsz2cxs5w@privaterelay.appleid.com">
 <title>Parity Compare</title>
 <script>/* @license
 Papa Parse
@@ -203,7 +207,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   <div class="logo">PARITY<span>.compare</span></div>
   <div class="divider"></div>
   <div class="header-tag">CSV Dataset Validation Tool</div>
-  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.6</div>
+  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.7</div>
 </header>
 
 <div class="tab-bar" id="tabBar" role="tablist" aria-label="Sessions">
@@ -812,6 +816,7 @@ function parseCSV(file,cb){
     complete:cb,error:e=>console.error(e),
   });
 }
+// Normalize join key: case-insensitive, whitespace-tolerant — prevents "S001" ≠ "s001" mismatches
 function nk(v){return String(v??'').trim().toLowerCase();}
 function innerJoin(A,B,key){
   const map=new Map();
@@ -883,6 +888,9 @@ function doJoin(){
 ══════════════════════════════════════════════════ */
 const _ddControllers=new Map();
 function makeDD(inputId,ddId,items,onSel){
+  // Abort the previous controller for this input before adding new listeners —
+  // makeDD is called again whenever dropdown items change (e.g. file reload),
+  // and without this, old listeners stack causing duplicate onSel firings.
   if(_ddControllers.has(inputId)){_ddControllers.get(inputId).abort();}
   const ac=new AbortController(),sig=ac.signal;
   _ddControllers.set(inputId,ac);
@@ -903,11 +911,15 @@ function makeDD(inputId,ddId,items,onSel){
   }
   inp.addEventListener('focus',()=>{render(inp.value);dd.classList.add('open');},{signal:sig});
   inp.addEventListener('input',()=>render(inp.value),{signal:sig});
+  // 150 ms delay: clicking an option fires blur on the input before mousedown on the option.
+  // Without the delay, the dropdown closes and the mousedown is lost before onSel runs.
   inp.addEventListener('blur',()=>setTimeout(()=>dd.classList.remove('open'),150),{signal:sig});
   inp._openDD=()=>{render('');dd.classList.add('open');};
 }
 function lbl(col,src){return`[${src==='A'?state.nameA:state.nameB}] ${col}`;}
 function buildKeyDropdown(){
+  // value encodes col+'\x00'+src so columns with identical names in A and B remain distinguishable.
+  // The null byte is chosen because it cannot appear in a CSV column name after header trimming.
   const items=[
     ...state.headersA.map(c=>({value:c+'\x00A',col:c,label:lbl(c,'A'),src:'A'})),
     ...state.headersB.map(c=>({value:c+'\x00B',col:c,label:lbl(c,'B'),src:'B'})),
@@ -971,6 +983,7 @@ function setCbarDefault(){syncCbar();}
 const TABLEAU12=['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac','#d37295','#fabfd2'];
 
 function colVals(rows,col){return rows.map(r=>{const v=r[col];return(v===null||v===undefined||v==='')?NaN:Number(v);});}
+// >50% finite: treats columns with sparse NaN/null as numeric without misclassifying text columns that happen to have a few parseable values
 function isNum(arr){const ok=arr.filter(v=>Number.isFinite(v));return ok.length>arr.length*0.5;}
 function g(id){return document.getElementById(id);}
 function iv(id){return parseInt(g(id).value);}
@@ -1000,6 +1013,9 @@ function computeStats(xV,yV){
   const mY=yV.reduce((a,b)=>a+b,0)/n;
   const ssT=yV.reduce((s,y)=>s+(y-mY)**2,0);
   const ssR=res.reduce((s,r)=>s+r**2,0);
+  // r2p is Nash-Sutcliffe Efficiency (NSE), not conventional R².
+  // NSE = 1 - SS_res/SS_tot where SS_tot is variance around mean(Y), making it
+  // appropriate for parity (y=x) assessment rather than regression fit.
   const r2p=ssT===0?NaN:1-ssR/ssT;
   const rmse=Math.sqrt(ssR/n);
   const mae=res.reduce((s,r)=>s+Math.abs(r),0)/n;
@@ -1182,6 +1198,7 @@ function renderPlot(){
     yaxis:{
       ...axisBase,range:yRange,
       title:{text:sv('inputYLabel')||state.colB,font:{size:fsA,color:'#222222'}},
+      // scaleanchor keeps y=x at 45°; constrain:'domain' prevents Plotly from expanding the plot area to compensate
       scaleanchor:'x',scaleratio:1,constrain:'domain',
     },
     legend:{
@@ -1203,6 +1220,8 @@ function renderPlot(){
       font:{family:'JetBrains Mono,monospace',size:fsAnnot,color:'#111111'},
       align:'left',
     }],
+    // Margin heuristic keeps axis labels/ticks inside the export canvas as font size changes.
+    // Plotly automargin conflicts with scaleanchor so margins are computed manually.
     margin:{l:Math.round(30+fsA*1+fsTk*3),r:30,t:Math.round(18+fsT*1.6),b:Math.round(20+fsA*1.5+fsTk*2.2)},
   };
 
@@ -1273,6 +1292,8 @@ async function downloadColorbar(){
   const cbW=iv('cbarThickness'),fsCt=iv('fsCbarTick'),fsCT=iv('fsCbarTitle');
   const ph=Math.max(220,Math.round(iv('figH')*0.65));
   const pw=cbW+90;
+  // 64 invisible dummy points (size 0.1) exist solely to give Plotly a color array
+  // that activates the colorbar — there is no way to render a standalone colorbar otherwise.
   const n=64;
   const step=cMax===cMin?1:(cMax-cMin)/(n-1);
   const dummy=Array.from({length:n},(_,i)=>cMin+i*step);
@@ -1332,7 +1353,7 @@ async function downloadZip(){
     const blob=await zip.generateAsync({type:'blob'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=url;a.download='parity_plots.zip';a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url); // safe to revoke immediately — browser handles the download asynchronously
   }catch(e){console.error('ZIP export failed:',e);}
   finally{div.remove();btn.disabled=false;btn.textContent=orig;}
 }
@@ -1552,6 +1573,7 @@ function restorePlot(idx){
   g('downloadBtn').style.display='';
 }
 function delSaved(idx,e){
+  // Set to null rather than splice so numeric IDs in card IDs and onclick handlers stay stable
   e.stopPropagation();state.savedPlots[idx]=null;
   const card=g(`saved-card-${idx}`);if(card)card.remove();
 }

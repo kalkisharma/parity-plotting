@@ -1,4 +1,4 @@
-<!-- parity-compare v1.0.0 -->
+<!-- parity-compare v1.0.1 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -178,7 +178,7 @@
   <div class="logo">PARITY<span>.compare</span></div>
   <div class="divider"></div>
   <div class="header-tag">CSV Dataset Validation Tool</div>
-  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.0</div>
+  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.1</div>
 </header>
 
 <div class="tab-bar" id="tabBar" role="tablist" aria-label="Sessions">
@@ -1070,17 +1070,19 @@ function renderPlot(){
           name:'No color data',marker:{...baseMarker,color:'#888888'},
           hovertemplate:'No color data<br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>'});
       }
-      mk.color=finIdxs.map(i=>cV[i]);mk.colorscale=sv('cmapSelect');mk.showscale=showCbar;
-      if(showCbar)mk.colorbar={
-        title:{text:sv('inputCbarLabel')||state.colorCol,font:{size:fsCT,color:'#333333'}},
-        tickfont:{size:fsCt,color:'#333333',family:'JetBrains Mono,monospace'},
-        bgcolor:'#ffffff',outlinecolor:'#cccccc',outlinewidth:1,thickness:cbW,
-      };
-      traces.push({
-        x:finIdxs.map(i=>xV[i]),y:finIdxs.map(i=>yV[i]),mode:'markers',type:'scatter',
-        marker:mk,name:'Data',
-        hovertemplate:'X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>',
-      });
+      if(finIdxs.length>0){
+        mk.color=finIdxs.map(i=>cV[i]);mk.colorscale=sv('cmapSelect');mk.showscale=showCbar;
+        if(showCbar)mk.colorbar={
+          title:{text:sv('inputCbarLabel')||state.colorCol,font:{size:fsCT,color:'#333333'}},
+          tickfont:{size:fsCt,color:'#333333',family:'JetBrains Mono,monospace'},
+          bgcolor:'#ffffff',outlinecolor:'#cccccc',outlinewidth:1,thickness:cbW,
+        };
+        traces.push({
+          x:finIdxs.map(i=>xV[i]),y:finIdxs.map(i=>yV[i]),mode:'markers',type:'scatter',
+          marker:mk,name:'Data',
+          hovertemplate:'X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>',
+        });
+      }
     }else{
       mk.color='#2563eb';
       traces.push({
@@ -1090,8 +1092,12 @@ function renderPlot(){
       });
     }
   }else{
-    const cats=[...new Set(cV.map(String))];
+    const cats=[...new Set(cV.map(String))].filter(c=>c!=='NaN'&&c!=='');
     if(cats.length>12)g('fileAlerts').innerHTML='<div class="alert warn">Color-by column has >12 categories — colors will repeat.</div>';
+    const nanCatIdxs=cV.reduce((a,v,i)=>(!Number.isFinite(v)&&typeof v!=='string')||v===''?[...a,i]:a,[]);
+    if(nanCatIdxs.length>0)traces.push({x:nanCatIdxs.map(i=>xV[i]),y:nanCatIdxs.map(i=>yV[i]),mode:'markers',type:'scatter',
+      name:'No color data',marker:{...baseMarker,color:'#888888'},
+      hovertemplate:'No color data<br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>'});
     cats.forEach((cat,ci)=>{
       const idxs=cV.reduce((a,v,i)=>String(v)===cat?[...a,i]:a,[]);
       traces.push({
@@ -1105,7 +1111,7 @@ function renderPlot(){
 
   // Stats annotation
   const stats=computeStats(xV,yV);
-  if(cb('showBestFit')&&stats&&stats.n>=3){
+  if(cb('showBestFit')&&stats&&stats.n>=3&&Number.isFinite(stats.slope)){
     const bfY0=stats.slope*bandMn+stats.intc,bfY1=stats.slope*bandMx+stats.intc;
     traces.push({x:[bandMn,bandMx],y:[bfY0,bfY1],mode:'lines',
       line:{color:sv('bfColor'),dash:sv('bfDash'),width:parseFloat(g('bfWidth').value)},
@@ -1469,6 +1475,9 @@ function mkCard(idx,snap,scroll){
       <button class="saved-del" onclick="delSaved(${idx},event)" aria-label="Delete" title="Delete">×</button>
     </div>`;
   card.addEventListener('click',()=>restorePlot(idx));
+  card.querySelector('.saved-card-title').addEventListener('input',function(){
+    if(state.savedPlots[idx])state.savedPlots[idx].title=this.value;
+  });
   strip.appendChild(card);
   if(scroll)card.scrollIntoView({behavior:'smooth',block:'nearest',inline:'end'});
 }
@@ -1658,6 +1667,7 @@ g('presetFileInput').addEventListener('change',function(){loadPreset(this.files[
     e.preventDefault();
     inp.value='';inp.dataset.selected='';inp._selVal=undefined;
     state.colA=null;
+    state.xLabelLocked=false;updateXLabelLockUi();
     g('inputXLabel').value='';
     syncTitle();
     ['ctrlSection','typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='none');
@@ -1678,6 +1688,7 @@ g('presetFileInput').addEventListener('change',function(){loadPreset(this.files[
     e.preventDefault();
     inp.value='';inp.dataset.selected='';inp._selVal=undefined;
     state.colB=null;
+    state.yLabelLocked=false;updateYLabelLockUi();
     g('inputYLabel').value='';
     syncTitle();
     ['ctrlSection','typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='none');

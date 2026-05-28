@@ -1,4 +1,4 @@
-<!-- parity-compare v1.0.2 -->
+<!-- parity-compare v1.0.3 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -178,7 +178,7 @@
   <div class="logo">PARITY<span>.compare</span></div>
   <div class="divider"></div>
   <div class="header-tag">CSV Dataset Validation Tool</div>
-  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.2</div>
+  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.3</div>
 </header>
 
 <div class="tab-bar" id="tabBar" role="tablist" aria-label="Sessions">
@@ -780,6 +780,7 @@ function renderTabBar(){
    SECTION 2 — CSV PARSING + INNER JOIN
 ══════════════════════════════════════════════════ */
 function parseCSV(file,cb){
+  // skipEmptyLines silently discards blank rows — reported row count may differ from file line count
   Papa.parse(file,{
     header:true,dynamicTyping:true,skipEmptyLines:true,
     transformHeader:h=>h.replace(/^\uFEFF/,'').trim(),
@@ -840,8 +841,8 @@ function doJoin(){
   state.joinedA=mA;state.joinedB=mB;
   const n=mA.length;
   let html='';
-  if(dA.length)html+=`<div class="alert warn">Duplicate keys in [A]: ${dA.slice(0,5).join(', ')}${dA.length>5?' …':''}</div>`;
-  if(dB.length)html+=`<div class="alert warn">Duplicate keys in [B]: ${dB.slice(0,5).join(', ')}${dB.length>5?' …':''}</div>`;
+  if(dA.length)html+=`<div class="alert warn">Duplicate keys in [A] — ${dA.length} row${dA.length===1?'':'s'} dropped: ${dA.slice(0,5).map(v=>`<code>${escHtml(String(v))}</code>`).join(' ')}${dA.length>5?` … +${dA.length-5} more`:''}</div>`;
+  if(dB.length)html+=`<div class="alert warn">Duplicate keys in [B] — ${dB.length} row${dB.length===1?'':'s'} dropped: ${dB.slice(0,5).map(v=>`<code>${escHtml(String(v))}</code>`).join(' ')}${dB.length>5?` … +${dB.length-5} more`:''}</div>`;
   html+=`<div class="alert ${n===0?'danger':'success'}">${n===0?'No rows matched. Check identifier column values.':`Matched ${n} of ${nA} rows from [A], ${n} of ${nB} rows from [B]`}</div>`;
   if(dropA.length){const preview=dropA.slice(0,8).map(v=>`<code>${escHtml(String(v))}</code>`).join(' ');html+=`<details class="drop-details"><summary>${dropA.length} unmatched key${dropA.length===1?'':'s'} in [A]</summary><div class="drop-list">${preview}${dropA.length>8?` <span>… +${dropA.length-8} more</span>`:''}</div></details>`;}
   if(dropB.length){const preview=dropB.slice(0,8).map(v=>`<code>${escHtml(String(v))}</code>`).join(' ');html+=`<details class="drop-details"><summary>${dropB.length} unmatched key${dropB.length===1?'':'s'} in [B]</summary><div class="drop-list">${preview}${dropB.length>8?` <span>… +${dropB.length-8} more</span>`:''}</div></details>`;}
@@ -996,6 +997,8 @@ function renderPlot(){
   const yRaw=colVals(state.joinedB,state.colB);
   const cRaw=state.colorCol?colVals(state.colorSource==='A'?state.joinedA:state.joinedB,state.colorCol):[];
 
+  // xV, yV, cV are built in lockstep — cV[k] always corresponds to xV[k]/yV[k].
+  // finIdxs/nanIdxs computed from cV are safe to index into xV/yV. Do not reorder independently.
   let xV=[],yV=[],cV=[],nan=0;
   for(let i=0;i<xRaw.length;i++){
     if(isNaN(xRaw[i])||isNaN(yRaw[i])){nan++;continue;}
@@ -1008,6 +1011,13 @@ function renderPlot(){
 
   if(xV.length===0){
     g('rangeAlerts').innerHTML='<div class="alert danger">No numeric data to plot. All matched rows were excluded — check that the selected columns contain numbers.</div>';
+    if(state.plotRendered){
+      state.plotRendered=false;
+      g('plotArea').classList.add('hidden');g('emptyState').classList.remove('hidden');
+      g('statsPanel').style.display='none';g('downloadBtn').style.display='none';
+      g('showCbarRow').style.display='none';g('cbarExportBtn').style.display='none';
+      g('renderBtn').textContent='Render plot';
+    }
     return;
   }
 
@@ -1057,6 +1067,11 @@ function renderPlot(){
   if(cb('band10'))traces.push(...band(bandMn,bandMx,0.10,'#d97706','±10%'));
 
   const isNumC=state.colorCol&&isNum(cV);
+  if(state.colorCol&&cV.length>0){
+    const numRatio=cV.filter(v=>Number.isFinite(v)).length/cV.length;
+    if(numRatio>=0.4&&numRatio<=0.6)
+      g('rangeAlerts').innerHTML+=`<div class="alert warn">Color column "${state.colorCol}" is ${Math.round(numRatio*100)}% numeric — classified as ${isNumC?'continuous (colorscale)':'categorical'}. Check column type if unexpected.</div>`;
+  }
   const baseMarker={size:iv('markerSize'),opacity:iv('markerOpacity')/100,line:{color:edgeW>0?edgeC:'rgba(0,0,0,0)',width:edgeW}};
   if(!state.colorCol||isNumC){
     const mk={...baseMarker};
@@ -1238,7 +1253,7 @@ async function downloadColorbar(){
   const dummy=Array.from({length:n},(_,i)=>cMin+i*step);
 
   const div=document.createElement('div');
-  div.style.cssText=`position:fixed;left:-${pw+20}px;top:0;width:${pw}px;height:${ph}px;`;
+  div.style.cssText=`position:fixed;left:-9999px;top:0;width:${pw}px;height:${ph}px;visibility:hidden;`;
   document.body.appendChild(div);
   try{
     await Plotly.newPlot(div,[{

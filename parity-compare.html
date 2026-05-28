@@ -1,13 +1,13 @@
-<!-- parity-compare v1.0.4 -->
+<!-- parity-compare v1.0.5 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Parity Compare</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.32.0/plotly.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="lib/papaparse.min.js"></script>
+<script src="lib/plotly.min.js"></script>
+<script src="lib/jszip.min.js"></script>
 <style>
   :root{
     --bg:#13131a;--surface:#1e1e28;--panel:#1a1a24;
@@ -178,7 +178,7 @@
   <div class="logo">PARITY<span>.compare</span></div>
   <div class="divider"></div>
   <div class="header-tag">CSV Dataset Validation Tool</div>
-  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.4</div>
+  <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.05em">v1.0.5</div>
 </header>
 
 <div class="tab-bar" id="tabBar" role="tablist" aria-label="Sessions">
@@ -867,7 +867,7 @@ function makeDD(inputId,ddId,items,onSel){
     f=f.toLowerCase();
     _filt=items.filter(x=>x.label.toLowerCase().includes(f));
     dd.innerHTML=_filt.length
-      ?_filt.map((x,i)=>`<div class="opt${x.value===(inp._selVal??'')?' selected':''}" data-fi="${i}" data-src="${x.src||''}" role="option">${x.src?`<span class="tag ${x.src.toLowerCase()}">[${x.src}]</span>`:''}${x.col}</div>`).join('')
+      ?_filt.map((x,i)=>`<div class="opt${x.value===(inp._selVal??'')?' selected':''}" data-fi="${i}" data-src="${x.src||''}" role="option">${x.src?`<span class="tag ${x.src.toLowerCase()}">[${x.src}]</span>`:''}${escHtml(x.col)}</div>`).join('')
       :'<div class="no-results">No matches</div>';
     dd.querySelectorAll('.opt').forEach(el=>el.addEventListener('mousedown',e=>{
       e.preventDefault();
@@ -890,7 +890,7 @@ function buildKeyDropdown(){
   makeDD('keySearch','keyDropdown',items,(val)=>{
     const col=val.split('\x00')[0];
     if(state.headersA.includes(col)&&state.headersB.includes(col)){state.joinKey=col;doJoin();g('keySearch')._syncClear?.();}
-    else g('joinAlerts').innerHTML=`<div class="alert warn">Column "${col}" not found in both files.</div>`;
+    else g('joinAlerts').innerHTML=`<div class="alert warn">Column "${escHtml(col)}" not found in both files.</div>`;
   });
 }
 function buildColDropdowns(){
@@ -1070,7 +1070,7 @@ function renderPlot(){
   if(state.colorCol&&cV.length>0){
     const numRatio=cV.filter(v=>Number.isFinite(v)).length/cV.length;
     if(numRatio>=0.4&&numRatio<=0.6)
-      g('rangeAlerts').innerHTML+=`<div class="alert warn">Color column "${state.colorCol}" is ${Math.round(numRatio*100)}% numeric — classified as ${isNumC?'continuous (colorscale)':'categorical'}. Check column type if unexpected.</div>`;
+      g('rangeAlerts').innerHTML+=`<div class="alert warn">Color column "${escHtml(state.colorCol)}" is ${Math.round(numRatio*100)}% numeric — classified as ${isNumC?'continuous (colorscale)':'categorical'}. Check column type if unexpected.</div>`;
   }
   const baseMarker={size:iv('markerSize'),opacity:iv('markerOpacity')/100,line:{color:edgeW>0?edgeC:'rgba(0,0,0,0)',width:edgeW}};
   if(!state.colorCol||isNumC){

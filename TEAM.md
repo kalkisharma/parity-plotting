@@ -63,3 +63,18 @@ The Tech Lead coordinates all agents and is the only agent that communicates res
 - Error and validation messaging (what to show when data is wrong)
 - Parameter configuration panel clarity
 - Accessibility basics (labels, contrast, keyboard nav)
+
+---
+
+## Security Engineer
+**Focus:** Safe local deployment in restricted/classified environments
+**Responsibilities:**
+- Ensure zero external network calls — all scripts, fonts, and assets must be bundled locally (no CDN)
+- Audit all `innerHTML` / `insertAdjacentHTML` usage for XSS vectors via untrusted CSV data (column names, values rendered into DOM)
+- Verify `escHtml()` is applied consistently before any user-controlled string is written to HTML
+- Review file-handling code: only `File` objects from user-initiated drag/drop or `<input type=file>` are accepted; no path traversal risk
+- Confirm all blob URLs and object URLs are revoked after use to prevent memory leaks and unintended data retention
+- Confirm no `eval()`, `new Function()`, or dynamic script injection anywhere in the codebase
+- Advise on Content Security Policy headers if the tool is served from a local web server rather than opened as a `file://` URL
+- Flag any state that persists beyond the browser session (localStorage, IndexedDB, cookies) — default posture is session-only
+- Review third-party library versions for known CVEs before bundling

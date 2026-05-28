@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parity Compare</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.32.0/plotly.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg:#13131a;--surface:#1e1e28;--panel:#1a1a24;
+    --border:#2e2e3e;--border2:#3a3a4e;
+    --accent:#5b8dee;--accent2:#7c6fe0;
+    --text:#e2e2ec;--text2:#9090a8;--text3:#5a5a72;
+    --success:#4caf7d;--warn:#e8a04a;--danger:#e05c5c;
+    --mono:'JetBrains Mono','Fira Code','Courier New',monospace;
+    --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+    --radius:8px;--radius-lg:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+  header{display:flex;align-items:center;gap:12px;padding:0 20px;height:48px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;}
+  .logo{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:0.08em;color:var(--accent);}
+  .logo span{color:var(--text2);font-weight:400;}
+  header .divider{flex:1;}
+  .header-tag{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;}
+  .main{display:flex;flex:1;overflow:hidden;}
+  .left-panel{width:320px;flex-shrink:0;border-right:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;}
+  .left-panel::-webkit-scrollbar{width:4px;}
+  .left-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+  .section{border-bottom:1px solid var(--border);padding:14px 16px;}
+  .section-title{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+  details.section{padding:0;}
+  details.section>summary{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);padding:14px 16px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;}
+  details.section>summary::-webkit-details-marker{display:none;}
+  details.section>summary::after{content:'▸';font-size:10px;transition:transform 0.2s;}
+  details[open].section>summary::after{transform:rotate(90deg);}
+  details.section>.details-body{padding:0 16px 14px;}
+  .dropzone{border:1px dashed var(--border2);border-radius:var(--radius);padding:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s;margin-bottom:8px;position:relative;}
+  .dropzone:hover,.dropzone.drag-over{border-color:var(--accent);background:rgba(91,141,238,0.05);}
+  .dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .dz-label{display:flex;align-items:center;gap:8px;}
+  .dz-badge{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.08em;padding:2px 6px;border-radius:4px;flex-shrink:0;}
+  .dz-badge.a{background:rgba(91,141,238,0.2);color:var(--accent);border:1px solid rgba(91,141,238,0.4);}
+  .dz-badge.b{background:rgba(124,111,224,0.2);color:var(--accent2);border:1px solid rgba(124,111,224,0.4);}
+  .dz-name-input{background:transparent;border:none;color:var(--text);font-family:var(--sans);font-size:12px;flex:1;outline:none;min-width:0;position:relative;z-index:1;}
+  .dz-status{font-size:11px;color:var(--text3);margin-top:4px;padding-left:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .dz-status.loaded{color:var(--success);}
+  .dz-status.error{color:var(--danger);}
+  label.ctrl-label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;margin-top:10px;}
+  label.ctrl-label:first-child{margin-top:0;}
+  .search-wrap{position:relative;margin-bottom:4px;}
+  .search-wrap input[type=text]{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:12px;padding:7px 10px;outline:none;transition:border-color 0.2s;}
+  .search-wrap input[type=text]:focus{border-color:var(--accent);}
+  .dd-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:3px;z-index:2;transition:color 0.15s;}
+  .dd-clear:hover{color:var(--danger);}
+  .dd-clear.hidden{display:none!important;}
+  .search-wrap input[type=text].has-clear{padding-right:28px;}
+  .dropdown-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);max-height:180px;overflow-y:auto;z-index:100;display:none;}
+  .dropdown-list::-webkit-scrollbar{width:4px;}
+  .dropdown-list::-webkit-scrollbar-thumb{background:var(--border2);}
+  .dropdown-list.open{display:block;}
+  .dropdown-list .opt{padding:7px 10px;cursor:pointer;font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background 0.1s,color 0.1s;}
+  .dropdown-list .opt:hover{background:rgba(91,141,238,0.1);color:var(--text);}
+  .dropdown-list .opt.selected{color:var(--accent);}
+  .dropdown-list .opt .tag{font-family:var(--mono);font-size:10px;font-weight:700;margin-right:5px;}
+  .dropdown-list .opt .tag.a{color:var(--accent);}
+  .dropdown-list .opt .tag.b{color:var(--accent2);}
+  .dropdown-list .no-results{padding:8px 10px;font-size:12px;color:var(--text3);font-style:italic;}
+  .slider-row{display:flex;align-items:center;gap:10px;}
+  input[type=range]{flex:1;appearance:none;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;transition:transform 0.1s;}
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+  .slider-val{font-family:var(--mono);font-size:12px;color:var(--accent);min-width:52px;text-align:right;}
+  .slider-num{width:50px;background:transparent;border:none;border-bottom:1px solid var(--border2);color:var(--accent);font-family:var(--mono);font-size:12px;text-align:right;padding:0 2px;outline:none;-moz-appearance:textfield;cursor:text;flex-shrink:0;}
+  .slider-num:focus{border-bottom-color:var(--accent);background:rgba(91,141,238,0.05);border-radius:3px 3px 0 0;}
+  .slider-num::-webkit-inner-spin-button,.slider-num::-webkit-outer-spin-button{-webkit-appearance:none;}
+  select{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:12px;padding:7px 10px;outline:none;cursor:pointer;transition:border-color 0.2s;}
+  select:focus{border-color:var(--accent);}
+  select option{background:var(--surface);}
+  input[type=text].ctrl-input,input[type=number].ctrl-input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:12px;padding:7px 10px;outline:none;transition:border-color 0.2s;}
+  input[type=text].ctrl-input:focus,input[type=number].ctrl-input:focus{border-color:var(--accent);}
+  input[type=number].ctrl-input{-moz-appearance:textfield;}
+  input[type=number].ctrl-input::-webkit-inner-spin-button,input[type=number].ctrl-input::-webkit-outer-spin-button{-webkit-appearance:none;}
+  .range-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px;}
+  .range-grid label.mini-label{font-size:10px;color:var(--text3);display:block;margin-bottom:3px;}
+  .check-row{display:flex;gap:14px;margin-top:2px;flex-wrap:wrap;}
+  .check-row label{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text2);}
+  input[type=checkbox]{appearance:none;width:14px;height:14px;border:1px solid var(--border2);border-radius:3px;cursor:pointer;position:relative;flex-shrink:0;transition:background 0.15s,border-color 0.15s;}
+  input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent);}
+  input[type=checkbox]:checked::after{content:'';position:absolute;top:2px;left:4px;width:4px;height:7px;border:2px solid white;border-top:none;border-left:none;transform:rotate(45deg);}
+  input[type=color].edge-color{width:34px;height:28px;padding:2px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);cursor:pointer;vertical-align:middle;}
+  input[type=color].edge-color::-webkit-color-swatch-wrapper{padding:0;}
+  input[type=color].edge-color::-webkit-color-swatch{border:none;border-radius:4px;}
+  .edge-row{display:flex;align-items:center;gap:8px;}
+  .input-lock-row{display:flex;gap:4px;align-items:center;}
+  .input-lock-row .ctrl-input{flex:1;min-width:0;}
+  .lock-btn{flex-shrink:0;background:rgba(91,141,238,0.08);border:1px solid rgba(91,141,238,0.3);border-radius:var(--radius);color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:0.06em;cursor:pointer;padding:5px 7px;line-height:1;transition:all 0.15s;}
+  .lock-btn:hover{background:rgba(91,141,238,0.18);}
+  .lock-btn.locked{background:transparent;border-color:var(--border2);color:var(--text3);}
+  .lock-btn.locked:hover{border-color:var(--text2);color:var(--text2);}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all 0.15s;}
+  .btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(91,141,238,0.07);}
+  .btn.primary{background:rgba(91,141,238,0.12);border-color:rgba(91,141,238,0.4);color:var(--accent);}
+  .btn.primary:hover{background:rgba(91,141,238,0.2);}
+  .btn.sm{padding:5px 10px;font-size:11px;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .alert{border-radius:var(--radius);padding:8px 10px;font-size:11px;line-height:1.5;margin-top:8px;}
+  .alert.warn{background:rgba(232,160,74,0.1);border:1px solid rgba(232,160,74,0.3);color:var(--warn);}
+  .alert.danger{background:rgba(224,92,92,0.1);border:1px solid rgba(224,92,92,0.3);color:var(--danger);}
+  .alert.success{background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);color:var(--success);}
+  .right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+  .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--text3);}
+  .empty-icon{width:64px;height:64px;border:2px dashed var(--border2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .empty-state p{font-size:13px;}
+  .plot-area{flex:1;overflow:auto;padding:16px 16px 0;display:flex;align-items:flex-start;}
+  #plotDiv{border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);flex-shrink:0;}
+  .stats-panel{padding:12px 16px;border-top:1px solid var(--border);display:none;flex-shrink:0;}
+  .stats-title{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
+  .stat-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;}
+  .stat-label{font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:0.04em;}
+  .stat-value{font-family:var(--mono);font-size:14px;color:var(--text);font-weight:700;}
+  .stat-value.good{color:var(--success);}
+  .stat-value.warn{color:var(--warn);}
+  .stat-value.muted{color:var(--text2);}
+  .saved-strip{border-top:1px solid var(--border);padding:10px 16px;display:none;flex-shrink:0;}
+  .saved-strip-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .saved-strip-title{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);}
+  .saved-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
+  .saved-scroll::-webkit-scrollbar{height:3px;}
+  .saved-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+  .saved-card{flex-shrink:0;width:180px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color 0.2s;}
+  .saved-card:hover{border-color:var(--accent);}
+  .saved-card.active-card{border-color:var(--accent);}
+  .saved-thumb{width:100%;height:100px;object-fit:cover;display:block;background:var(--bg);}
+  .saved-thumb-placeholder{width:100%;height:100px;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text3);font-size:11px;font-family:var(--mono);}
+  .saved-card-footer{padding:6px 8px;display:flex;align-items:center;gap:4px;}
+  .saved-card-title{flex:1;background:transparent;border:none;color:var(--text2);font-family:var(--sans);font-size:11px;outline:none;min-width:0;cursor:text;}
+  .saved-del{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:3px;line-height:1;flex-shrink:0;transition:color 0.15s;}
+  .saved-del:hover{color:var(--danger);}
+  .strip-toggle{background:none;border:none;color:var(--text3);cursor:pointer;font-size:10px;padding:1px 3px;border-radius:3px;line-height:1;transition:color 0.15s;}
+  .strip-toggle:hover{color:var(--text2);}
+  .hidden{display:none!important;}
+  /* ── Tab bar ── */
+  .tab-bar{display:flex;align-items:center;padding:0 8px;background:var(--panel);border-bottom:1px solid var(--border);height:34px;flex-shrink:0;overflow-x:auto;}
+  .tab-bar::-webkit-scrollbar{height:2px;}
+  .tab-bar::-webkit-scrollbar-thumb{background:var(--border2);}
+  .tab-list{display:flex;gap:3px;align-items:center;flex:1;min-width:0;}
+  .tab-chip{display:inline-flex;align-items:center;gap:1px;padding:3px 3px 3px 6px;border-radius:6px;cursor:default;border:1px solid transparent;font-size:11px;color:var(--text3);transition:all 0.15s;max-width:200px;min-width:0;user-select:none;}
+  .tab-chip:hover{background:rgba(255,255,255,0.04);color:var(--text2);}
+  .tab-chip.active{background:rgba(91,141,238,0.12);border-color:rgba(91,141,238,0.3);color:var(--text);}
+  .tab-name{flex:1;min-width:20px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;outline:none;cursor:pointer;padding:0 2px;border-radius:3px;border:1px solid transparent;}
+  .tab-chip.active .tab-name{cursor:text;}
+  .tab-name:focus{overflow:visible;text-overflow:clip;border-color:var(--accent);background:rgba(91,141,238,0.08);}
+  .tab-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0 3px;border-radius:3px;line-height:1.2;flex-shrink:0;transition:color 0.15s;}
+  .tab-btn:hover:not([disabled]){color:var(--text);}
+  .tab-btn[disabled]{opacity:0.2;cursor:default;pointer-events:none;}
+  .new-tab-btn{flex-shrink:0;background:none;border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-size:14px;padding:0 7px;line-height:1.8;cursor:pointer;margin-left:6px;transition:all 0.15s;}
+  .new-tab-btn:hover{border-color:var(--accent);color:var(--accent);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PARITY<span>.compare</span></div>
+  <div class="divider"></div>
+  <div class="header-tag">CSV Dataset Validation Tool</div>
+</header>
+
+<div class="tab-bar" id="tabBar" role="tablist" aria-label="Sessions">
+  <div class="tab-list" id="tabList"></div>
+  <button class="new-tab-btn" onclick="newSession()" title="New session" aria-label="New session">+</button>
+</div>
+
+<div class="main">
+  <div class="left-panel">
+
+    <!-- DATASETS -->
+    <div class="section">
+      <div class="section-title">Datasets</div>
+      <div class="dropzone" id="dzA" tabindex="0" role="button" aria-label="Load Dataset A">
+        <input type="file" accept=".csv" id="fileA" aria-label="Choose CSV for Dataset A">
+        <div class="dz-label">
+          <span class="dz-badge a">A</span>
+          <input type="text" class="dz-name-input" id="nameA" value="Dataset A" placeholder="Label..." onclick="event.stopPropagation()">
+        </div>
+        <div class="dz-status" id="statusA">Drop CSV or click to browse</div>
+      </div>
+      <div class="dropzone" id="dzB" tabindex="0" role="button" aria-label="Load Dataset B">
+        <input type="file" accept=".csv" id="fileB" aria-label="Choose CSV for Dataset B">
+        <div class="dz-label">
+          <span class="dz-badge b">B</span>
+          <input type="text" class="dz-name-input" id="nameB" value="Dataset B" placeholder="Label..." onclick="event.stopPropagation()">
+        </div>
+        <div class="dz-status" id="statusB">Drop CSV or click to browse</div>
+      </div>
+      <div id="fileAlerts"></div>
+    </div>
+
+    <!-- JOIN KEY -->
+    <div class="section" id="joinSection" style="display:none">
+      <div class="section-title">Join Key</div>
+      <label class="ctrl-label" for="keySearch">Unique identifier column</label>
+      <div class="search-wrap">
+        <input type="text" id="keySearch" placeholder="Search columns…" autocomplete="off" aria-label="Search identifier column">
+        <button class="dd-clear hidden" id="keyClear" aria-label="Clear join key" title="Clear">×</button>
+        <div class="dropdown-list" id="keyDropdown" role="listbox"></div>
+      </div>
+      <div id="joinAlerts"></div>
+    </div>
+
+    <!-- COMPARISON COLUMNS -->
+    <div class="section" id="colSection" style="display:none">
+      <div class="section-title">Comparison Columns</div>
+      <label class="ctrl-label" for="colASearch">X-axis — from Dataset A</label>
+      <div class="search-wrap">
+        <input type="text" id="colASearch" placeholder="Search [A] columns…" autocomplete="off" aria-label="Search Dataset A column">
+        <button class="dd-clear hidden" id="colAClear" aria-label="Clear X-axis column" title="Clear">×</button>
+        <div class="dropdown-list" id="colADropdown" role="listbox"></div>
+      </div>
+      <label class="ctrl-label" for="colBSearch">Y-axis — from Dataset B</label>
+      <div class="search-wrap">
+        <input type="text" id="colBSearch" placeholder="Search [B] columns…" autocomplete="off" aria-label="Search Dataset B column">
+        <button class="dd-clear hidden" id="colBClear" aria-label="Clear Y-axis column" title="Clear">×</button>
+        <div class="dropdown-list" id="colBDropdown" role="listbox"></div>
+      </div>
+      <label class="ctrl-label" for="colorSearch">Color by</label>
+      <div class="search-wrap">
+        <input type="text" id="colorSearch" placeholder="Search columns…" autocomplete="off" aria-label="Search color-by column">
+        <button class="dd-clear hidden" id="colorClear" aria-label="Clear color-by selection" title="Clear">×</button>
+        <div class="dropdown-list" id="colorDropdown" role="listbox"></div>
+      </div>
+    </div>
+
+    <!-- PLOT CONTROLS -->
+    <div class="section" id="ctrlSection" style="display:none">
+      <div class="section-title">Plot Controls</div>
+
+      <label class="ctrl-label" for="cmapSelect">Colormap</label>
+      <select id="cmapSelect" aria-label="Colormap">
+        <option value="Viridis">Viridis</option>
+        <option value="Plasma">Plasma</option>
+        <option value="RdBu">RdBu</option>
+        <option value="Coolwarm" selected>Coolwarm</option>
+        <option value="Spectral">Spectral</option>
+        <option value="Turbo">Turbo</option>
+        <option value="Inferno">Inferno</option>
+        <option value="Magma">Magma</option>
+      </select>
+
+      <label class="ctrl-label">Marker size</label>
+      <div class="slider-row">
+        <input type="range" id="markerSize" min="3" max="20" value="7" step="1" aria-label="Marker size">
+        <span class="slider-val" id="markerSizeVal">7</span>
+      </div>
+
+      <label class="ctrl-label">Marker opacity</label>
+      <div class="slider-row">
+        <input type="range" id="markerOpacity" min="0" max="100" value="88" step="5" aria-label="Marker opacity">
+        <span class="slider-val" id="markerOpacityVal">88%</span>
+      </div>
+
+      <label class="ctrl-label">Marker edge</label>
+      <div class="edge-row">
+        <input type="color" class="edge-color" id="edgeColor" value="#000000" aria-label="Marker edge color" title="Marker edge color">
+        <div class="slider-row" style="flex:1">
+          <input type="range" id="edgeWidth" min="0" max="4" value="1" step="0.5" aria-label="Marker edge width">
+          <span class="slider-val" id="edgeWidthVal">1.0</span>
+        </div>
+      </div>
+
+      <div id="showCbarRow" style="display:none">
+        <label class="ctrl-label">Colorbar thickness (px)</label>
+        <div class="slider-row">
+          <input type="range" id="cbarThickness" min="5" max="60" value="22" step="1" aria-label="Colorbar thickness">
+          <span class="slider-val" id="cbarThicknessVal">22</span>
+        </div>
+        <div class="check-row" style="margin-top:6px">
+          <label><input type="checkbox" id="showColorbar" checked aria-label="Show colorbar"> Show colorbar</label>
+        </div>
+      </div>
+
+      <label class="ctrl-label">Error bands</label>
+      <div class="check-row">
+        <label title="±5%: shaded region where |y − x| / |x| ≤ 5%"><input type="checkbox" id="band5" aria-label="5% error band"> ±5% ⓘ</label>
+        <label title="±10%: shaded region where |y − x| / |x| ≤ 10%"><input type="checkbox" id="band10" checked aria-label="10% error band"> ±10% ⓘ</label>
+      </div>
+
+      <label class="ctrl-label">Gridlines</label>
+      <div class="check-row">
+        <label><input type="checkbox" id="majorGrid" checked aria-label="Major gridlines"> Major</label>
+        <label><input type="checkbox" id="minorGrid" aria-label="Minor gridlines"> Minor</label>
+      </div>
+
+      <label class="ctrl-label">Axis ranges <span style="font-size:10px;color:var(--text3)">(blank = auto)</span></label>
+      <div class="range-grid">
+        <div><label class="mini-label">X min</label><input type="number" step="any" class="ctrl-input" id="xMin" placeholder="auto" aria-label="X axis minimum"></div>
+        <div><label class="mini-label">X max</label><input type="number" step="any" class="ctrl-input" id="xMax" placeholder="auto" aria-label="X axis maximum"></div>
+        <div><label class="mini-label">Y min</label><input type="number" step="any" class="ctrl-input" id="yMin" placeholder="auto" aria-label="Y axis minimum"></div>
+        <div><label class="mini-label">Y max</label><input type="number" step="any" class="ctrl-input" id="yMax" placeholder="auto" aria-label="Y axis maximum"></div>
+      </div>
+      <div id="rangeAlerts"></div>
+      <button class="btn sm" onclick="resetRanges()" style="margin-top:6px">↺ Reset to auto</button>
+
+      <label class="ctrl-label" for="inputTitle">Plot title</label>
+      <div class="input-lock-row">
+        <input type="text" class="ctrl-input" id="inputTitle" placeholder="Parity comparison…" aria-label="Plot title">
+        <button class="lock-btn" id="titleLock" title="Auto-updating — click to lock">auto</button>
+      </div>
+      <label class="ctrl-label" for="inputXLabel">X label</label>
+      <input type="text" class="ctrl-input" id="inputXLabel" placeholder="X axis label…" aria-label="X axis label">
+      <label class="ctrl-label" for="inputYLabel">Y label</label>
+      <input type="text" class="ctrl-input" id="inputYLabel" placeholder="Y axis label…" aria-label="Y axis label">
+      <label class="ctrl-label" for="inputCbarLabel">Colorbar label</label>
+      <div class="input-lock-row">
+        <input type="text" class="ctrl-input" id="inputCbarLabel" placeholder="Color-by label…" aria-label="Colorbar label">
+        <button class="lock-btn" id="cbarLock" title="Auto-updating — click to lock">auto</button>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="renderBtn" onclick="renderPlot()">Render plot</button>
+        <button class="btn" id="downloadBtn" onclick="downloadPlot()" style="display:none">↓ PNG</button>
+        <button class="btn" id="cbarExportBtn" onclick="downloadColorbar()" style="display:none" title="Export colorbar as standalone PNG">↓ Colorbar</button>
+      </div>
+    </div>
+
+    <!-- TYPOGRAPHY + SIZE (collapsible) -->
+    <details class="section" id="typographySection" style="display:none">
+      <summary>Typography &amp; Size</summary>
+      <div class="details-body">
+
+        <label class="ctrl-label">Figure width (px)</label>
+        <div class="slider-row">
+          <input type="range" id="figW" min="400" max="2000" value="800" step="10" aria-label="Figure width">
+          <input type="number" class="slider-num" id="figWVal" value="800" min="400" max="2000" step="10" aria-label="Figure width value">
+        </div>
+
+        <label class="ctrl-label">Figure height (px)</label>
+        <div class="slider-row">
+          <input type="range" id="figH" min="300" max="1400" value="700" step="10" aria-label="Figure height">
+          <input type="number" class="slider-num" id="figHVal" value="700" min="300" max="1400" step="10" aria-label="Figure height value">
+        </div>
+
+        <label class="ctrl-label">Title font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsTitle" min="8" max="48" value="14" step="1" aria-label="Title font size">
+          <input type="number" class="slider-num" id="fsTitleVal" value="14" min="8" max="48" step="1" aria-label="Title font size value">
+        </div>
+
+        <label class="ctrl-label">Axis label font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsAxisLabel" min="8" max="36" value="12" step="1" aria-label="Axis label font size">
+          <input type="number" class="slider-num" id="fsAxisLabelVal" value="12" min="8" max="36" step="1" aria-label="Axis label font size value">
+        </div>
+
+        <label class="ctrl-label">Tick label font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsTick" min="8" max="30" value="10" step="1" aria-label="Tick label font size">
+          <input type="number" class="slider-num" id="fsTickVal" value="10" min="8" max="30" step="1" aria-label="Tick font size value">
+        </div>
+
+        <label class="ctrl-label">Legend font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsLegend" min="8" max="24" value="11" step="1" aria-label="Legend font size">
+          <input type="number" class="slider-num" id="fsLegendVal" value="11" min="8" max="24" step="1" aria-label="Legend font size value">
+        </div>
+
+        <label class="ctrl-label">Stats box font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsAnnot" min="8" max="30" value="12" step="1" aria-label="Stats annotation font size">
+          <input type="number" class="slider-num" id="fsAnnotVal" value="12" min="8" max="30" step="1" aria-label="Stats box font size value">
+        </div>
+
+        <label class="ctrl-label">Colorbar numbers font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsCbarTick" min="8" max="30" value="10" step="1" aria-label="Colorbar tick font size">
+          <input type="number" class="slider-num" id="fsCbarTickVal" value="10" min="8" max="30" step="1" aria-label="Colorbar tick font size value">
+        </div>
+
+        <label class="ctrl-label">Colorbar title font size</label>
+        <div class="slider-row">
+          <input type="range" id="fsCbarTitle" min="8" max="30" value="11" step="1" aria-label="Colorbar title font size">
+          <input type="number" class="slider-num" id="fsCbarTitleVal" value="11" min="8" max="30" step="1" aria-label="Colorbar title font size value">
+        </div>
+
+      </div>
+    </details>
+
+    <!-- STYLE PRESETS -->
+    <div class="section" id="presetSection" style="display:none">
+      <div class="section-title">Style Preset</div>
+      <div class="btn-row">
+        <button class="btn sm" onclick="savePreset()" title="Download current style settings as JSON">↓ Save preset</button>
+        <button class="btn sm" onclick="g('presetFileInput').click()" title="Load style settings from a JSON preset file">↑ Load preset</button>
+        <input type="file" id="presetFileInput" accept=".json" style="display:none" aria-label="Load preset JSON">
+      </div>
+      <div id="presetAlert"></div>
+    </div>
+
+    <!-- SAVE -->
+    <div class="section" id="saveSection" style="display:none">
+      <div class="section-title">Save</div>
+      <button class="btn primary" onclick="savePlot()" style="width:100%">+ Save current plot</button>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">⌗</div>
+      <p>Load two CSV files to begin</p>
+      <p style="font-size:11px;color:var(--text3)">Parity plots · Error bands · Stats · Saved comparisons</p>
+    </div>
+    <div class="plot-area hidden" id="plotArea">
+      <div id="plotDiv"></div>
+    </div>
+    <div class="stats-panel" id="statsPanel">
+      <div class="stats-title">Statistics <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px;">Stats box on plot is draggable</span></div>
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+    <div class="saved-strip" id="savedStrip">
+      <div class="saved-strip-header">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button class="strip-toggle" id="savedStripToggle" onclick="toggleSavedScroll()" title="Collapse / expand" aria-expanded="true" aria-controls="savedScroll">▼</button>
+          <span class="saved-strip-title">Saved plots</span>
+        </div>
+        <button class="btn sm" id="zipBtn" onclick="downloadZip()" title="Download all saved plots as a ZIP of PNGs">↓ ZIP</button>
+      </div>
+      <div class="saved-scroll" id="savedScroll"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════
+   SECTION 1 — STATE
+══════════════════════════════════════════════════ */
+const state={
+  rawA:null,rawB:null,
+  headersA:[],headersB:[],
+  nameA:'Dataset A',nameB:'Dataset B',
+  joinKey:null,
+  joinedA:[],joinedB:[],
+  colA:null,colB:null,
+  colorCol:null,colorSource:null,
+  plotRendered:false,
+  savedPlots:[],
+  annotPos:null,   // {x, y} in paper coords — null = use default
+  figInited:false, // true after first render sets slider defaults from DOM
+  titleLocked:false,
+  cbarLocked:false,
+};
+const plotState={data:[],layout:{},meta:{}};
+
+/* ══════════════════════════════════════════════════
+   SECTION 1b — SESSION MANAGEMENT (TABS)
+══════════════════════════════════════════════════ */
+function buildDefaultUI(){
+  return{
+    nameA:'Dataset A',nameB:'Dataset B',
+    keySearch:'',colASearch:'',colBSearch:'',colorSearch:'',
+    keySearch__selVal:undefined,colASearch__selVal:undefined,
+    colBSearch__selVal:undefined,colorSearch__selVal:undefined,
+    inputTitle:'',inputXLabel:'',inputYLabel:'',inputCbarLabel:'',
+    xMin:'',xMax:'',yMin:'',yMax:'',
+    showColorbar:true,band5:false,band10:true,majorGrid:true,minorGrid:false,
+    markerSize:'7',markerOpacity:'88',cbarThickness:'22',edgeWidth:'1',edgeColor:'#000000',
+    figW:'800',figH:'700',
+    fsTitle:'14',fsAxisLabel:'12',fsTick:'10',fsLegend:'11',
+    fsAnnot:'12',fsCbarTick:'10',fsCbarTitle:'11',
+    cmapSelect:'Coolwarm',
+    vis_joinSection:'none',vis_colSection:'none',vis_ctrlSection:'none',
+    vis_typographySection:'none',vis_presetSection:'none',vis_saveSection:'none',
+    vis_showCbarRow:'none',
+    vis_plotArea:'hidden',vis_emptyState:'',
+    vis_statsPanel:'none',vis_downloadBtn:'none',vis_cbarExportBtn:'none',
+    vis_savedStrip:'none',
+    statusA_text:'Drop CSV or click to browse',statusA_cls:'dz-status',
+    statusB_text:'Drop CSV or click to browse',statusB_cls:'dz-status',
+    fileAlerts:'',joinAlerts:'',rangeAlerts:'',statsGrid:'',
+    markerSizeVal:'7',markerOpacityVal:'88%',cbarThicknessVal:'22',edgeWidthVal:'1.0',
+    figWVal:'800',figHVal:'700',
+    fsTitleVal:'14',fsAxisLabelVal:'12',fsTickVal:'10',fsLegendVal:'11',
+    fsAnnotVal:'12',fsCbarTickVal:'10',fsCbarTitleVal:'11',
+    renderBtnText:'Render plot',
+  };
+}
+function createFreshSession(name){
+  return{
+    name:name||'Session 1',
+    state:{
+      rawA:null,rawB:null,
+      headersA:[],headersB:[],
+      nameA:'Dataset A',nameB:'Dataset B',
+      joinKey:null,joinedA:[],joinedB:[],
+      colA:null,colB:null,
+      colorCol:null,colorSource:null,
+      plotRendered:false,savedPlots:[],
+      annotPos:null,figInited:false,
+      titleLocked:false,cbarLocked:false,
+      _fileA:null,_fileB:null,
+    },
+    plotState:{data:[],layout:{},meta:{}},
+    ui:buildDefaultUI(),
+  };
+}
+const sessions=[createFreshSession('Session 1')];
+let activeSession=0;
+
+function snapshotUI(){
+  const snap={};
+  ['nameA','nameB','keySearch','colASearch','colBSearch','colorSearch',
+   'inputTitle','inputXLabel','inputYLabel','inputCbarLabel',
+   'xMin','xMax','yMin','yMax'].forEach(id=>{
+    const el=g(id);if(!el)return;
+    snap[id]=el.value;snap[id+'__selVal']=el._selVal;
+  });
+  ['showColorbar','band5','band10','majorGrid','minorGrid'].forEach(id=>{
+    const el=g(id);if(el)snap[id]=el.checked;
+  });
+  ['markerSize','markerOpacity','cbarThickness','edgeWidth','figW','figH',
+   'fsTitle','fsAxisLabel','fsTick','fsLegend','fsAnnot','fsCbarTick','fsCbarTitle'].forEach(id=>{
+    const el=g(id);if(el)snap[id]=el.value;
+  });
+  snap.cmapSelect=g('cmapSelect').value;snap.edgeColor=g('edgeColor').value;
+  ['joinSection','colSection','ctrlSection','typographySection','presetSection','saveSection','showCbarRow'].forEach(id=>{
+    snap['vis_'+id]=g(id)?g(id).style.display:'none';
+  });
+  snap.vis_plotArea=g('plotArea').classList.contains('hidden')?'hidden':'';
+  snap.vis_emptyState=g('emptyState').classList.contains('hidden')?'hidden':'';
+  snap.vis_statsPanel=g('statsPanel').style.display;
+  snap.vis_downloadBtn=g('downloadBtn').style.display;
+  snap.vis_cbarExportBtn=g('cbarExportBtn').style.display;
+  snap.vis_savedStrip=g('savedStrip').style.display;
+  snap.statusA_text=g('statusA').textContent;snap.statusA_cls=g('statusA').className;
+  snap.statusB_text=g('statusB').textContent;snap.statusB_cls=g('statusB').className;
+  snap.fileAlerts=g('fileAlerts').innerHTML;snap.joinAlerts=g('joinAlerts').innerHTML;
+  snap.rangeAlerts=g('rangeAlerts').innerHTML;snap.statsGrid=g('statsGrid').innerHTML;
+  ['markerSizeVal','markerOpacityVal','cbarThicknessVal','edgeWidthVal','figWVal','figHVal',
+   'fsTitleVal','fsAxisLabelVal','fsTickVal','fsLegendVal','fsAnnotVal','fsCbarTickVal','fsCbarTitleVal'].forEach(id=>{
+    const el=g(id);if(el)snap[id]=el.tagName==='INPUT'?el.value:el.textContent;
+  });
+  snap.renderBtnText=g('renderBtn').textContent;
+  return snap;
+}
+function captureCurrentSession(){
+  const s=sessions[activeSession];
+  s.state={...state};
+  s.state.rawA=state.rawA?state.rawA.slice():null;
+  s.state.rawB=state.rawB?state.rawB.slice():null;
+  s.state.headersA=[...state.headersA];
+  s.state.headersB=[...state.headersB];
+  s.state.joinedA=state.joinedA.slice();
+  s.state.joinedB=state.joinedB.slice();
+  s.state.savedPlots=state.savedPlots.map(p=>p?{...p}:null);
+  s.plotState={
+    data:state.plotRendered?JSON.parse(JSON.stringify(plotState.data)):[],
+    layout:state.plotRendered?JSON.parse(JSON.stringify(plotState.layout)):{},
+    meta:state.plotRendered?{...plotState.meta}:{},
+  };
+  s.ui=snapshotUI();
+}
+function restoreSessionUI(session){
+  const ss=session.state;
+  Object.assign(state,ss);
+  state.rawA=ss.rawA?ss.rawA.slice():null;
+  state.rawB=ss.rawB?ss.rawB.slice():null;
+  state.headersA=[...ss.headersA];
+  state.headersB=[...ss.headersB];
+  state.joinedA=ss.joinedA.slice();
+  state.joinedB=ss.joinedB.slice();
+  state.savedPlots=ss.savedPlots.map(p=>p?{...p}:null);
+  plotState.data=session.plotState.data.length?JSON.parse(JSON.stringify(session.plotState.data)):[];
+  plotState.layout=Object.keys(session.plotState.layout).length?JSON.parse(JSON.stringify(session.plotState.layout)):{};
+  plotState.meta={...session.plotState.meta};
+  const ui=session.ui;
+  ['nameA','nameB','keySearch','colASearch','colBSearch','colorSearch',
+   'inputTitle','inputXLabel','inputYLabel','inputCbarLabel',
+   'xMin','xMax','yMin','yMax'].forEach(id=>{
+    const el=g(id);if(!el)return;
+    el.value=ui[id]??'';
+    el._selVal=ui[id+'__selVal'];
+    el.dataset.selected=(ui[id+'__selVal']!=null)?ui[id+'__selVal']:'';
+  });
+  ['showColorbar','band5','band10','majorGrid','minorGrid'].forEach(id=>{
+    const el=g(id);if(el&&ui[id]!==undefined)el.checked=ui[id];
+  });
+  ['markerSize','cbarThickness','edgeWidth','figW','figH',
+   'fsTitle','fsAxisLabel','fsTick','fsLegend','fsAnnot','fsCbarTick','fsCbarTitle'].forEach(id=>{
+    const el=g(id);if(el&&ui[id]!==undefined)el.value=ui[id];
+  });
+  if(g('cmapSelect'))g('cmapSelect').value=ui.cmapSelect||'Coolwarm';
+  if(g('edgeColor'))g('edgeColor').value=ui.edgeColor||'#000000';
+  ['joinSection','colSection','ctrlSection','typographySection','presetSection','saveSection','showCbarRow'].forEach(id=>{
+    const el=g(id);if(el)el.style.display=ui['vis_'+id]??'none';
+  });
+  ui.vis_plotArea==='hidden'?g('plotArea').classList.add('hidden'):g('plotArea').classList.remove('hidden');
+  ui.vis_emptyState==='hidden'?g('emptyState').classList.add('hidden'):g('emptyState').classList.remove('hidden');
+  g('statsPanel').style.display=ui.vis_statsPanel||'none';
+  g('downloadBtn').style.display=ui.vis_downloadBtn||'none';
+  g('cbarExportBtn').style.display=ui.vis_cbarExportBtn||'none';
+  g('statusA').textContent=ui.statusA_text||'Drop CSV or click to browse';
+  g('statusA').className=ui.statusA_cls||'dz-status';
+  g('statusB').textContent=ui.statusB_text||'Drop CSV or click to browse';
+  g('statusB').className=ui.statusB_cls||'dz-status';
+  g('fileAlerts').innerHTML=ui.fileAlerts||'';
+  g('joinAlerts').innerHTML=ui.joinAlerts||'';
+  g('rangeAlerts').innerHTML=ui.rangeAlerts||'';
+  g('statsGrid').innerHTML=ui.statsGrid||'';
+  ['markerSizeVal','markerOpacityVal','cbarThicknessVal','edgeWidthVal','figWVal','figHVal',
+   'fsTitleVal','fsAxisLabelVal','fsTickVal','fsLegendVal','fsAnnotVal','fsCbarTickVal','fsCbarTitleVal'].forEach(id=>{
+    const el=g(id);if(el&&ui[id]){if(el.tagName==='INPUT')el.value=ui[id];else el.textContent=ui[id];}
+  });
+  g('renderBtn').textContent=ui.renderBtnText||'Render plot';
+  // Rebuild dropdowns (AbortControllers don't survive serialization)
+  if(state.rawA&&state.rawB){buildKeyDropdown();if(state.joinKey)buildColDropdowns();}
+  // Sync clear buttons and lock UIs
+  ['keySearch','colASearch','colBSearch','colorSearch'].forEach(id=>g(id)?._syncClear?.());
+  updateTitleLockUi();updateCbarLockUi();
+  // Rebuild saved plots strip
+  g('savedScroll').innerHTML='';
+  state.savedPlots.forEach((snap,i)=>{if(snap)mkCard(i,snap,false);});
+  const hasSaved=state.savedPlots.filter(Boolean).length>0;
+  g('savedStrip').style.display=hasSaved?'block':'none';
+  // Restore Plotly
+  if(state.plotRendered&&plotState.data.length){
+    const pd=g('plotDiv');
+    const w=plotState.layout.width||800,h=plotState.layout.height||700;
+    pd.style.width=w+'px';pd.style.height=h+'px';
+    Plotly.react('plotDiv',plotState.data,plotState.layout,{
+      responsive:false,displayModeBar:true,displaylogo:false,
+      edits:{legendPosition:true,annotationPosition:true},
+    });
+  }else{try{Plotly.purge('plotDiv');}catch(e){}}
+}
+function activateSession(idx){
+  if(idx===activeSession)return;
+  captureCurrentSession();
+  activeSession=idx;
+  restoreSessionUI(sessions[idx]);
+  renderTabBar();
+}
+function newSession(){
+  captureCurrentSession();
+  sessions.push(createFreshSession(`Session ${sessions.length+1}`));
+  activeSession=sessions.length-1;
+  restoreSessionUI(sessions[activeSession]);
+  renderTabBar();
+}
+function closeSession(idx){
+  if(sessions.length<=1)return;
+  const isActive=idx===activeSession;
+  const sState=isActive?state:sessions[idx].state;
+  if(sState.rawA||sState.rawB){
+    if(!confirm(`Close "${sessions[idx].name}"? The loaded data will be lost.`))return;
+  }
+  sessions.splice(idx,1);
+  if(isActive){
+    activeSession=Math.min(idx,sessions.length-1);
+    restoreSessionUI(sessions[activeSession]);
+  }else{
+    if(activeSession>idx)activeSession--;
+  }
+  renderTabBar();
+}
+function moveSession(idx,dir){
+  const ni=idx+dir;
+  if(ni<0||ni>=sessions.length)return;
+  [sessions[idx],sessions[ni]]=[sessions[ni],sessions[idx]];
+  if(activeSession===idx)activeSession=ni;
+  else if(activeSession===ni)activeSession=idx;
+  renderTabBar();
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function renderTabBar(){
+  const list=g('tabList');
+  list.innerHTML=sessions.map((s,i)=>`
+    <div class="tab-chip${i===activeSession?' active':''}" data-idx="${i}" role="tab" aria-selected="${i===activeSession}">
+      <button class="tab-btn" data-mv="-1"${i===0?' disabled':''} title="Move left" aria-label="Move left">‹</button>
+      <span class="tab-name" contenteditable="true" spellcheck="false" title="Click to rename">${escHtml(s.name)}</span>
+      <button class="tab-btn" data-mv="1"${i===sessions.length-1?' disabled':''} title="Move right" aria-label="Move right">›</button>
+      <button class="tab-btn tab-close" title="Close session" aria-label="Close">×</button>
+    </div>`).join('');
+  list.querySelectorAll('.tab-chip').forEach((chip,i)=>{
+    chip.addEventListener('mousedown',e=>{
+      if(e.target.closest('.tab-btn,.tab-name'))return;
+      if(i!==activeSession)activateSession(i);
+    });
+    const nameEl=chip.querySelector('.tab-name');
+    nameEl.addEventListener('click',e=>{e.stopPropagation();if(i!==activeSession)activateSession(i);});
+    nameEl.addEventListener('focus',()=>{
+      const r=document.createRange();r.selectNodeContents(nameEl);
+      const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);
+    });
+    nameEl.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();nameEl.blur();}
+      if(e.key==='Escape'){nameEl.textContent=sessions[i].name;nameEl.blur();}
+    });
+    nameEl.addEventListener('blur',()=>{
+      const n=(nameEl.textContent||'').trim()||sessions[i].name;
+      sessions[i].name=n;nameEl.textContent=n;
+    });
+    chip.querySelectorAll('.tab-btn[data-mv]').forEach(btn=>{
+      btn.addEventListener('click',e=>{e.stopPropagation();if(!btn.disabled)moveSession(i,parseInt(btn.dataset.mv));});
+    });
+    chip.querySelector('.tab-close').addEventListener('click',e=>{e.stopPropagation();closeSession(i);});
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   SECTION 2 — CSV PARSING + INNER JOIN
+══════════════════════════════════════════════════ */
+function parseCSV(file,cb){
+  Papa.parse(file,{
+    header:true,dynamicTyping:true,skipEmptyLines:true,
+    transformHeader:h=>h.replace(/^\uFEFF/,'').trim(),
+    complete:cb,error:e=>console.error(e),
+  });
+}
+function nk(v){return String(v??'').trim().toLowerCase();}
+function innerJoin(A,B,key){
+  const map=new Map();
+  for(const r of B){const k=nk(r[key]);if(!map.has(k))map.set(k,r);}
+  const mA=[],mB=[],used=new Set();
+  for(const r of A){const k=nk(r[key]);if(map.has(k)&&!used.has(k)){mA.push(r);mB.push(map.get(k));used.add(k);}}
+  return{mA,mB,nA:A.length,nB:B.length};
+}
+function dupKeys(rows,key){
+  const seen=new Set(),d=[];
+  for(const r of rows){const k=nk(r[key]);if(seen.has(k))d.push(r[key]);seen.add(k);}
+  return d;
+}
+function onFileParsed(w,rows,headers){
+  if(w==='A'){state.rawA=rows;state.headersA=headers;setSt('A',`✓ ${rows.length} rows · ${headers.length} cols`,'loaded');}
+  else{state.rawB=rows;state.headersB=headers;setSt('B',`✓ ${rows.length} rows · ${headers.length} cols`,'loaded');}
+  if(state.rawA&&state.rawB)onBothLoaded();
+}
+function setSt(w,msg,cls){const el=g('status'+w);el.textContent=msg;el.className='dz-status '+cls;}
+function resetForNewFiles(){
+  state.colA=null;state.colB=null;state.colorCol=null;state.colorSource=null;
+  state.joinKey=null;state.joinedA=[];state.joinedB=[];
+  state.annotPos=null;state.figInited=false;state.plotRendered=false;
+  ['keySearch','colASearch','colBSearch','colorSearch'].forEach(id=>{const el=g(id);if(el){el.value='';el.dataset.selected='';el._selVal=undefined;}});
+  ['keySearch','colASearch','colBSearch','colorSearch'].forEach(id=>g(id)?._syncClear?.());
+  ['inputXLabel','inputYLabel','inputTitle','inputCbarLabel'].forEach(id=>{const el=g(id);if(el)el.value='';});
+  ['colSection','ctrlSection','typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='none');
+  clearEl('joinAlerts');clearEl('rangeAlerts');
+  g('plotArea').classList.add('hidden');g('emptyState').classList.remove('hidden');
+  g('statsPanel').style.display='none';g('downloadBtn').style.display='none';
+  g('showCbarRow').style.display='none';g('cbarExportBtn').style.display='none';
+  if(!state.savedPlots.filter(Boolean).length)g('savedStrip').style.display='none';
+  g('renderBtn').textContent='Render plot';
+  state.titleLocked=false;updateTitleLockUi();
+  state.cbarLocked=false;updateCbarLockUi();
+}
+function onBothLoaded(){
+  resetForNewFiles();
+  g('joinSection').style.display='';
+  buildKeyDropdown();
+  clearEl('fileAlerts');
+  if(state._fileA&&state._fileB&&state._fileA.name===state._fileB.name&&state._fileA.size===state._fileB.size)
+    g('fileAlerts').innerHTML='<div class="alert warn">Both files have the same name and size — are you sure you\'re not comparing a file with itself?</div>';
+}
+function doJoin(){
+  if(!state.joinKey)return;
+  const dA=dupKeys(state.rawA,state.joinKey),dB=dupKeys(state.rawB,state.joinKey);
+  const{mA,mB,nA,nB}=innerJoin(state.rawA,state.rawB,state.joinKey);
+  state.joinedA=mA;state.joinedB=mB;
+  const n=mA.length;
+  let html='';
+  if(dA.length)html+=`<div class="alert warn">Duplicate keys in [A]: ${dA.slice(0,5).join(', ')}${dA.length>5?' …':''}</div>`;
+  if(dB.length)html+=`<div class="alert warn">Duplicate keys in [B]: ${dB.slice(0,5).join(', ')}${dB.length>5?' …':''}</div>`;
+  html+=`<div class="alert ${n===0?'danger':'success'}">${n===0?'No rows matched. Check identifier column values.':`Matched ${n} of ${nA} rows from [A], ${n} of ${nB} rows from [B]`}</div>`;
+  g('joinAlerts').innerHTML=html;
+  if(n>0){
+    g('colSection').style.display='';
+    buildColDropdowns();
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   SECTION 3 — COLUMN SEARCH UI
+══════════════════════════════════════════════════ */
+const _ddControllers=new Map();
+function makeDD(inputId,ddId,items,onSel){
+  if(_ddControllers.has(inputId)){_ddControllers.get(inputId).abort();}
+  const ac=new AbortController(),sig=ac.signal;
+  _ddControllers.set(inputId,ac);
+  const inp=g(inputId),dd=g(ddId);
+  let _filt=[];
+  function render(f){
+    f=f.toLowerCase();
+    _filt=items.filter(x=>x.label.toLowerCase().includes(f));
+    dd.innerHTML=_filt.length
+      ?_filt.map((x,i)=>`<div class="opt${x.value===(inp._selVal??'')?' selected':''}" data-fi="${i}" data-src="${x.src||''}" role="option">${x.src?`<span class="tag ${x.src.toLowerCase()}">[${x.src}]</span>`:''}${x.col}</div>`).join('')
+      :'<div class="no-results">No matches</div>';
+    dd.querySelectorAll('.opt').forEach(el=>el.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      const item=_filt[parseInt(el.dataset.fi)];
+      inp.value=el.textContent.trim();inp._selVal=item.value;inp.dataset.selected=item.value;
+      onSel(item.value,el.dataset.src);dd.classList.remove('open');
+    }));
+  }
+  inp.addEventListener('focus',()=>{render(inp.value);dd.classList.add('open');},{signal:sig});
+  inp.addEventListener('input',()=>render(inp.value),{signal:sig});
+  inp.addEventListener('blur',()=>setTimeout(()=>dd.classList.remove('open'),150),{signal:sig});
+}
+function lbl(col,src){return`[${src==='A'?state.nameA:state.nameB}] ${col}`;}
+function buildKeyDropdown(){
+  const items=[
+    ...state.headersA.map(c=>({value:c+'\x00A',col:c,label:lbl(c,'A'),src:'A'})),
+    ...state.headersB.map(c=>({value:c+'\x00B',col:c,label:lbl(c,'B'),src:'B'})),
+  ];
+  makeDD('keySearch','keyDropdown',items,(val)=>{
+    const col=val.split('\x00')[0];
+    if(state.headersA.includes(col)&&state.headersB.includes(col)){state.joinKey=col;doJoin();g('keySearch')._syncClear?.();}
+    else g('joinAlerts').innerHTML=`<div class="alert warn">Column "${col}" not found in both files.</div>`;
+  });
+}
+function buildColDropdowns(){
+  const cA=state.headersA.map(c=>({value:c+'\x00A',col:c,label:lbl(c,'A'),src:'A'}));
+  const cB=state.headersB.map(c=>({value:c+'\x00B',col:c,label:lbl(c,'B'),src:'B'}));
+  makeDD('colASearch','colADropdown',cA,(val)=>{state.colA=val.split('\x00')[0];setAxisDefaults();g('colASearch')._syncClear?.();if(state.colA&&state.colB)g('ctrlSection').style.display='';if(state.plotRendered)renderPlot();});
+  makeDD('colBSearch','colBDropdown',cB,(val)=>{state.colB=val.split('\x00')[0];setAxisDefaults();g('colBSearch')._syncClear?.();if(state.colA&&state.colB)g('ctrlSection').style.display='';if(state.plotRendered)renderPlot();});
+  makeDD('colorSearch','colorDropdown',[...cA,...cB],(val,src)=>{state.colorCol=val.split('\x00')[0];state.colorSource=src;setCbarDefault();g('colorSearch')._syncClear?.();if(state.plotRendered)renderPlot();});
+}
+function autoTitle(){return state.colA&&state.colB?`${state.colA} vs ${state.colB}`:'Parity Comparison';}
+function syncTitle(){if(!state.titleLocked){g('inputTitle').value=autoTitle();updateTitleLockUi();}}
+function updateTitleLockUi(){
+  const btn=g('titleLock');if(!btn)return;
+  btn.textContent=state.titleLocked?'lock':'auto';
+  btn.classList.toggle('locked',state.titleLocked);
+  btn.title=state.titleLocked?'Locked — click to auto-update':'Auto-updating — click to lock';
+  btn.setAttribute('aria-pressed',String(state.titleLocked));
+}
+function setAxisDefaults(){
+  if(state.colA&&!g('inputXLabel').value)g('inputXLabel').value=`[${state.nameA}] ${state.colA}`;
+  if(state.colB&&!g('inputYLabel').value)g('inputYLabel').value=`[${state.nameB}] ${state.colB}`;
+  syncTitle();
+}
+function syncCbar(){if(!state.cbarLocked)g('inputCbarLabel').value=state.colorCol||'';}
+function updateCbarLockUi(){
+  const btn=g('cbarLock');if(!btn)return;
+  btn.textContent=state.cbarLocked?'lock':'auto';
+  btn.classList.toggle('locked',state.cbarLocked);
+  btn.title=state.cbarLocked?'Locked — click to auto-update':'Auto-updating — click to lock';
+  btn.setAttribute('aria-pressed',String(state.cbarLocked));
+}
+function setCbarDefault(){syncCbar();}
+
+/* ══════════════════════════════════════════════════
+   SECTION 4 — PLOT RENDERING
+══════════════════════════════════════════════════ */
+const TABLEAU12=['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac','#d37295','#fabfd2'];
+
+function colVals(rows,col){return rows.map(r=>{const v=r[col];return(v===null||v===undefined||v==='')?NaN:Number(v);});}
+function isNum(arr){const ok=arr.filter(v=>Number.isFinite(v));return ok.length>arr.length*0.5;}
+function g(id){return document.getElementById(id);}
+function iv(id){return parseInt(g(id).value);}
+function sv(id){return g(id).value;}
+function cb(id){return g(id).checked;}
+
+function getManualRange(){
+  const xMn=sv('xMin'),xMx=sv('xMax'),yMn=sv('yMin'),yMx=sv('yMax');
+  return{
+    xMin:xMn===''?null:parseFloat(xMn),
+    xMax:xMx===''?null:parseFloat(xMx),
+    yMin:yMn===''?null:parseFloat(yMn),
+    yMax:yMx===''?null:parseFloat(yMx),
+  };
+}
+function resetRanges(){
+  ['xMin','xMax','yMin','yMax'].forEach(id=>{g(id).value='';});
+  clearEl('rangeAlerts');
+  if(state.plotRendered)renderPlot();
+}
+
+/* compute stats values from arrays */
+function computeStats(xV,yV){
+  const n=xV.length;
+  if(n===0)return null;
+  const res=yV.map((y,i)=>y-xV[i]);
+  const mY=yV.reduce((a,b)=>a+b,0)/n;
+  const ssT=yV.reduce((s,y)=>s+(y-mY)**2,0);
+  const ssR=res.reduce((s,r)=>s+r**2,0);
+  const r2p=ssT===0?NaN:1-ssR/ssT;
+  const rmse=Math.sqrt(ssR/n);
+  const mae=res.reduce((s,r)=>s+Math.abs(r),0)/n;
+  const maxE=Math.max(...res.map(Math.abs));
+  const bias=res.reduce((a,b)=>a+b,0)/n;
+  const mX=xV.reduce((a,b)=>a+b,0)/n;
+  const ssXX=xV.reduce((s,x)=>s+(x-mX)**2,0);
+  const ssXY=xV.reduce((s,x,i)=>s+(x-mX)*(yV[i]-mY),0);
+  const slope=ssXX===0?NaN:ssXY/ssXX,intc=mY-slope*mX;
+  const yH=xV.map(x=>slope*x+intc);
+  const ssRF=yV.reduce((s,y,i)=>s+(y-yH[i])**2,0);
+  const r2f=ssT===0?NaN:1-ssRF/ssT;
+  return{n,r2p,rmse,mae,maxE,bias,slope,intc,r2f};
+}
+
+function renderPlot(){
+  if(!state.colA||!state.colB){alert('Please select columns for both X and Y axes.');return;}
+
+  const xRaw=colVals(state.joinedA,state.colA);
+  const yRaw=colVals(state.joinedB,state.colB);
+  const cRaw=state.colorCol?colVals(state.colorSource==='A'?state.joinedA:state.joinedB,state.colorCol):[];
+
+  let xV=[],yV=[],cV=[],nan=0;
+  for(let i=0;i<xRaw.length;i++){
+    if(isNaN(xRaw[i])||isNaN(yRaw[i])){nan++;continue;}
+    xV.push(xRaw[i]);yV.push(yRaw[i]);cV.push(cRaw[i]!==undefined?cRaw[i]:null);
+  }
+
+  // Manual overrides
+  const man=getManualRange();
+  clearEl('rangeAlerts');
+
+  if(xV.length===0){
+    g('rangeAlerts').innerHTML='<div class="alert danger">No numeric data to plot. All matched rows were excluded — check that the selected columns contain numbers.</div>';
+    return;
+  }
+
+  // Auto range from combined x+y
+  const allFin=[...xV,...yV].filter(isFinite);
+  const dataMn=Math.min(...allFin),dataMx=Math.max(...allFin);
+  const pad=(dataMx-dataMn)*0.05||1;
+  const autoMin=dataMn-pad,autoMax=dataMx+pad;
+  if(man.xMin!==null&&man.xMax!==null&&man.xMin>=man.xMax){g('rangeAlerts').innerHTML='<div class="alert warn">X min must be less than X max.</div>';return;}
+  if(man.yMin!==null&&man.yMax!==null&&man.yMin>=man.yMax){g('rangeAlerts').innerHTML='<div class="alert warn">Y min must be less than Y max.</div>';return;}
+
+  const xRange=[man.xMin!==null?man.xMin:autoMin,man.xMax!==null?man.xMax:autoMax];
+  const yRange=[man.yMin!==null?man.yMin:autoMin,man.yMax!==null?man.yMax:autoMax];
+  const bandMn=Math.min(xRange[0],yRange[0]);
+  const bandMx=Math.max(xRange[1],yRange[1]);
+  const anyManual=man.xMin!==null||man.xMax!==null||man.yMin!==null||man.yMax!==null;
+
+  // Figure size — init from container on first render
+  if(!state.figInited){
+    const pw=g('plotArea').offsetWidth-32||800;
+    const ph=g('plotArea').offsetHeight-32||700;
+    const initW=Math.min(Math.max(Math.round(pw/10)*10,400),2000);
+    const initH=Math.min(Math.max(Math.round(ph/10)*10,300),1400);
+    g('figW').value=initW;g('figWVal').value=initW;
+    g('figH').value=initH;g('figHVal').value=initH;
+    state.figInited=true;
+  }
+  const figW=iv('figW'),figH=iv('figH');
+
+  // Typography
+  const fsT=iv('fsTitle'),fsA=iv('fsAxisLabel'),fsTk=iv('fsTick');
+  const fsL=iv('fsLegend'),fsCt=iv('fsCbarTick'),fsCT=iv('fsCbarTitle');
+  const cbW=iv('cbarThickness'),fsAnnot=iv('fsAnnot');
+  const showMaj=cb('majorGrid'),showMin=cb('minorGrid');
+
+  // Marker edge
+  const edgeW=parseFloat(parseFloat(g('edgeWidth').value).toFixed(1));
+  const edgeC=sv('edgeColor');
+
+  // Traces
+  const traces=[{
+    x:[bandMn,bandMx],y:[bandMn,bandMx],
+    mode:'lines',line:{color:'#555555',dash:'dash',width:1.5},
+    name:'y = x',hoverinfo:'skip',showlegend:true,
+  }];
+  if(cb('band5')) traces.push(band(bandMn,bandMx,0.05,'#22a34a','±5%'));
+  if(cb('band10'))traces.push(band(bandMn,bandMx,0.10,'#d97706','±10%'));
+
+  const isNumC=state.colorCol&&isNum(cV);
+  const baseMarker={size:iv('markerSize'),opacity:iv('markerOpacity')/100,line:{color:edgeW>0?edgeC:'rgba(0,0,0,0)',width:edgeW}};
+  if(!state.colorCol||isNumC){
+    const mk={...baseMarker};
+    if(isNumC){
+      const showCbar=cb('showColorbar');
+      mk.color=cV;mk.colorscale=sv('cmapSelect');mk.showscale=showCbar;
+      if(showCbar)mk.colorbar={
+        title:{text:sv('inputCbarLabel')||state.colorCol,font:{size:fsCT,color:'#333333'}},
+        tickfont:{size:fsCt,color:'#333333',family:'JetBrains Mono,monospace'},
+        bgcolor:'#ffffff',outlinecolor:'#cccccc',outlinewidth:1,thickness:cbW,
+      };
+    }else{
+      mk.color='#2563eb';
+    }
+    traces.push({
+      x:xV,y:yV,mode:'markers',type:'scatter',
+      marker:mk,name:'Data',
+      hovertemplate:'X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>',
+    });
+  }else{
+    const cats=[...new Set(cV.map(String))];
+    if(cats.length>12)g('fileAlerts').innerHTML='<div class="alert warn">Color-by column has >12 categories — colors will repeat.</div>';
+    cats.forEach((cat,ci)=>{
+      const idxs=cV.reduce((a,v,i)=>String(v)===cat?[...a,i]:a,[]);
+      traces.push({
+        x:idxs.map(i=>xV[i]),y:idxs.map(i=>yV[i]),
+        mode:'markers',type:'scatter',name:cat,
+        marker:{...baseMarker,color:TABLEAU12[ci%TABLEAU12.length]},
+        hovertemplate:`<b>${cat}</b><br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>`,
+      });
+    });
+  }
+
+  // Stats annotation
+  const stats=computeStats(xV,yV);
+  const fs=v=>isNaN(v)?'N/A':v.toFixed(4);
+  const annotText=stats
+    ?`R² = ${fs(stats.r2p)}<br>MAE = ${fs(stats.mae)}<br>RMSE = ${fs(stats.rmse)}`
+    :'No data';
+  const annotX=state.annotPos?state.annotPos.x:0.98;
+  const annotY=state.annotPos?state.annotPos.y:0.05;
+
+  const axisBase={
+    showgrid:showMaj,gridcolor:showMaj?'#e0e0e0':'rgba(0,0,0,0)',gridwidth:1,
+    minor:{showgrid:showMin,gridcolor:'#f0f0f0',gridwidth:0.5},
+    zerolinecolor:'#aaaaaa',zerolinewidth:1,
+    linecolor:'#aaaaaa',linewidth:1,mirror:true,
+    tickfont:{family:'JetBrains Mono,monospace',size:fsTk,color:'#222222'},
+    tickcolor:'#aaaaaa',
+  };
+
+  const layout={
+    paper_bgcolor:'#ffffff',plot_bgcolor:'#ffffff',
+    width:figW,height:figH,
+    font:{family:'IBM Plex Sans,system-ui,sans-serif',color:'#333333',size:12},
+    title:{text:sv('inputTitle')||'Parity Comparison',x:0.5,xanchor:'center',xref:'paper',font:{size:fsT,color:'#111111'}},
+    xaxis:{...axisBase,range:xRange,title:{text:sv('inputXLabel')||state.colA,font:{size:fsA,color:'#222222'}}},
+    yaxis:{
+      ...axisBase,range:yRange,
+      title:{text:sv('inputYLabel')||state.colB,font:{size:fsA,color:'#222222'}},
+      scaleanchor:'x',scaleratio:1,constrain:'domain',
+    },
+    legend:{
+      font:{size:fsL,color:'#333333'},
+      bgcolor:'rgba(255,255,255,0.9)',bordercolor:'#cccccc',borderwidth:1,
+      x:0.01,y:0.99,xanchor:'left',yanchor:'top',
+    },
+    annotations:[{
+      x:annotX,y:annotY,
+      xref:'paper',yref:'paper',
+      xanchor:annotX>0.5?'right':'left',
+      yanchor:annotY<0.5?'bottom':'top',
+      text:annotText,
+      showarrow:false,
+      bgcolor:'rgba(255,255,255,0.88)',
+      bordercolor:'#aaaaaa',
+      borderwidth:1,
+      borderpad:8,
+      font:{family:'JetBrains Mono,monospace',size:fsAnnot,color:'#111111'},
+      align:'left',
+    }],
+    margin:{l:Math.round(30+fsA*1+fsTk*3),r:30,t:Math.round(18+fsT*1.6),b:Math.round(20+fsA*1.5+fsTk*2.2)},
+  };
+
+  // Apply explicit size to plotDiv
+  const pd=g('plotDiv');
+  pd.style.width=figW+'px';
+  pd.style.height=figH+'px';
+
+  plotState.data=traces;plotState.layout=layout;plotState.meta={xV,yV,nan,stats,colA:state.colA,colB:state.colB,colorCol:state.colorCol,colorSource:state.colorSource};
+
+  g('emptyState').classList.add('hidden');
+  g('plotArea').classList.remove('hidden');
+
+  Plotly.react('plotDiv',traces,layout,{
+    responsive:false,
+    displayModeBar:true,
+    displaylogo:false,
+    modeBarButtonsToRemove:['select2d','lasso2d'],
+    edits:{legendPosition:true,annotationPosition:true},
+  });
+
+  // Capture annotation drag position
+  pd.on('plotly_relayout',e=>{
+    const ax=e['annotations[0].x'],ay=e['annotations[0].y'];
+    if(ax!==undefined&&ay!==undefined){
+      state.annotPos={x:ax,y:ay};
+    }
+  });
+
+  state.plotRendered=true;
+  g('downloadBtn').style.display='';
+  g('showCbarRow').style.display=isNumC?'':'none';
+  g('cbarExportBtn').style.display=isNumC?'':'none';
+  ['typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='');
+  g('renderBtn').textContent='Re-render';
+  renderStats(xV,yV,nan,stats);
+  g('statsPanel').style.display='';
+}
+
+function band(mn,mx,pct,color,name){
+  let xs,ys;
+  if(mn>=0){
+    xs=[mn,mx,mx,mn,mn];
+    ys=[mn*(1+pct),mx*(1+pct),mx*(1-pct),mn*(1-pct),mn*(1+pct)];
+  }else if(mx<=0){
+    // all negative: upper boundary is x*(1-pct), lower is x*(1+pct)
+    xs=[mn,mx,mx,mn,mn];
+    ys=[mn*(1-pct),mx*(1-pct),mx*(1+pct),mn*(1+pct),mn*(1-pct)];
+  }else{
+    // spans zero: two kite regions meeting at origin
+    xs=[mn,0,mx,mx,0,mn,mn];
+    ys=[mn*(1-pct),0,mx*(1+pct),mx*(1-pct),0,mn*(1+pct),mn*(1-pct)];
+  }
+  return{x:xs,y:ys,fill:'toself',fillcolor:color+'22',line:{color,width:1,dash:'dot'},mode:'lines',name,hoverinfo:'skip'};
+}
+
+function downloadPlot(){
+  Plotly.downloadImage('plotDiv',{format:'png',width:iv('figW'),height:iv('figH'),filename:'parity_compare'});
+}
+async function downloadColorbar(){
+  if(!state.plotRendered||!state.colorCol)return;
+  const rows=state.colorSource==='A'?state.joinedA:state.joinedB;
+  const cVals=colVals(rows,state.colorCol).filter(v=>Number.isFinite(v));
+  if(!cVals.length||!isNum(cVals))return;
+  const cMin=Math.min(...cVals),cMax=Math.max(...cVals);
+  const cbW=iv('cbarThickness'),fsCt=iv('fsCbarTick'),fsCT=iv('fsCbarTitle');
+  const ph=Math.max(220,Math.round(iv('figH')*0.65));
+  const pw=cbW+90;
+  const n=64;
+  const step=cMax===cMin?1:(cMax-cMin)/(n-1);
+  const dummy=Array.from({length:n},(_,i)=>cMin+i*step);
+
+  const div=document.createElement('div');
+  div.style.cssText=`position:fixed;left:-${pw+20}px;top:0;width:${pw}px;height:${ph}px;`;
+  document.body.appendChild(div);
+  try{
+    await Plotly.newPlot(div,[{
+      x:dummy.map(()=>0),y:dummy,mode:'markers',type:'scatter',showlegend:false,hoverinfo:'none',
+      marker:{size:0.1,color:dummy,colorscale:sv('cmapSelect'),cmin:cMin,cmax:cMax,showscale:true,
+        colorbar:{
+          title:{text:sv('inputCbarLabel')||state.colorCol,font:{size:fsCT,color:'#333333'}},
+          tickfont:{size:fsCt,color:'#333333',family:'JetBrains Mono,monospace'},
+          bgcolor:'#ffffff',outlinecolor:'#cccccc',outlinewidth:1,thickness:cbW,
+          x:0,xanchor:'left',y:0.5,yanchor:'middle',len:0.88,
+        },
+      },
+    }],{
+      paper_bgcolor:'#ffffff',plot_bgcolor:'rgba(0,0,0,0)',
+      width:pw,height:ph,
+      xaxis:{visible:false,range:[0,1]},yaxis:{visible:false,range:[cMin,cMax]},
+      margin:{l:0,r:0,t:10,b:10},
+    },{staticPlot:true,displayModeBar:false});
+    const url=await Plotly.toImage(div,{format:'png',width:pw,height:ph});
+    const a=document.createElement('a');a.href=url;a.download='colorbar.png';a.click();
+  }finally{Plotly.purge(div);div.remove();}
+}
+async function downloadZip(){
+  const plots=state.savedPlots.filter(Boolean);
+  if(!plots.length)return;
+  const btn=g('zipBtn');
+  const orig=btn.textContent;
+  btn.disabled=true;
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;left:-9999px;top:0;';
+  document.body.appendChild(div);
+  try{
+    const zip=new JSZip();
+    for(let i=0;i<plots.length;i++){
+      btn.textContent=`${i+1}/${plots.length}…`;
+      const snap=plots[i];
+      const w=snap.layout.width||800,h=snap.layout.height||700;
+      div.style.width=w+'px';div.style.height=h+'px';
+      await Plotly.newPlot(div,snap.data,snap.layout,{staticPlot:true,displayModeBar:false});
+      const url=await Plotly.toImage(div,{format:'png',width:w,height:h});
+      const base64=url.split(',')[1];
+      const name=(snap.title||'').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'_')||`plot_${i+1}`;
+      zip.file(`${String(i+1).padStart(2,'0')}_${name}.png`,base64,{base64:true});
+      Plotly.purge(div);
+    }
+    const blob=await zip.generateAsync({type:'blob'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='parity_plots.zip';a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){console.error('ZIP export failed:',e);}
+  finally{div.remove();btn.disabled=false;btn.textContent=orig;}
+}
+function savePreset(){
+  const preset={
+    _schema:'parity-style-preset-v1',
+    colormap:sv('cmapSelect'),
+    marker_size:iv('markerSize'),
+    marker_opacity:iv('markerOpacity'),
+    marker_edge_color:sv('edgeColor'),
+    marker_edge_width:parseFloat(g('edgeWidth').value),
+    colorbar_thickness:iv('cbarThickness'),
+    show_band_5pct:cb('band5'),
+    show_band_10pct:cb('band10'),
+    show_major_grid:cb('majorGrid'),
+    show_minor_grid:cb('minorGrid'),
+    fig_width_px:iv('figW'),
+    fig_height_px:iv('figH'),
+    font_size_title:iv('fsTitle'),
+    font_size_axis_label:iv('fsAxisLabel'),
+    font_size_tick:iv('fsTick'),
+    font_size_legend:iv('fsLegend'),
+    font_size_stats_box:iv('fsAnnot'),
+    font_size_colorbar_tick:iv('fsCbarTick'),
+    font_size_colorbar_title:iv('fsCbarTitle'),
+    axis_x_min:sv('xMin')===''?null:parseFloat(sv('xMin')),
+    axis_x_max:sv('xMax')===''?null:parseFloat(sv('xMax')),
+    axis_y_min:sv('yMin')===''?null:parseFloat(sv('yMin')),
+    axis_y_max:sv('yMax')===''?null:parseFloat(sv('yMax')),
+    plot_title:sv('inputTitle'),
+    label_x_axis:sv('inputXLabel'),
+    label_y_axis:sv('inputYLabel'),
+    label_colorbar:sv('inputCbarLabel'),
+  };
+  const blob=new Blob([JSON.stringify(preset,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='parity_style_preset.json';a.click();
+  URL.revokeObjectURL(url);
+}
+function loadPreset(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    let p;
+    try{p=JSON.parse(e.target.result);}catch{g('presetAlert').innerHTML='<div class="alert danger">Invalid JSON.</div>';return;}
+    if(p._schema!=='parity-style-preset-v1')g('presetAlert').innerHTML='<div class="alert warn">Unrecognised schema — applying anyway.</div>';
+    else clearEl('presetAlert');
+    const ss=(id,v)=>{if(v!=null){const el=g(id);if(el)el.value=v;}};
+    const sc=(id,v)=>{if(v!=null){const el=g(id);if(el)el.checked=!!v;}};
+    const sl=(id,vid,fmt,v)=>{
+      if(v==null)return;const el=g(id);if(!el)return;el.value=v;
+      const lbl=g(vid);if(!lbl)return;
+      const isInput=lbl.tagName==='INPUT';
+      if(fmt==='float1'){if(isInput)lbl.value=parseFloat(v).toFixed(1);else lbl.textContent=parseFloat(v).toFixed(1);}
+      else if(fmt==='px'){if(isInput)lbl.value=v;else lbl.textContent=v+' px';}
+      else{if(isInput)lbl.value=String(v);else lbl.textContent=String(v);}
+    };
+    ss('cmapSelect',p.colormap);
+    sl('markerSize','markerSizeVal','int',p.marker_size);
+    sl('markerOpacity','markerOpacityVal','pct',p.marker_opacity);
+    ss('edgeColor',p.marker_edge_color);
+    sl('edgeWidth','edgeWidthVal','float1',p.marker_edge_width);
+    sl('cbarThickness','cbarThicknessVal','int',p.colorbar_thickness);
+    sc('band5',p.show_band_5pct);sc('band10',p.show_band_10pct);
+    sc('majorGrid',p.show_major_grid);sc('minorGrid',p.show_minor_grid);
+    sl('figW','figWVal','px',p.fig_width_px);sl('figH','figHVal','px',p.fig_height_px);
+    sl('fsTitle','fsTitleVal','int',p.font_size_title);
+    sl('fsAxisLabel','fsAxisLabelVal','int',p.font_size_axis_label);
+    sl('fsTick','fsTickVal','int',p.font_size_tick);
+    sl('fsLegend','fsLegendVal','int',p.font_size_legend);
+    sl('fsAnnot','fsAnnotVal','int',p.font_size_stats_box);
+    sl('fsCbarTick','fsCbarTickVal','int',p.font_size_colorbar_tick);
+    sl('fsCbarTitle','fsCbarTitleVal','int',p.font_size_colorbar_title);
+    ['xMin','xMax','yMin','yMax'].forEach(id=>{g(id).value='';});
+    if(p.axis_x_min!=null)g('xMin').value=p.axis_x_min;
+    if(p.axis_x_max!=null)g('xMax').value=p.axis_x_max;
+    if(p.axis_y_min!=null)g('yMin').value=p.axis_y_min;
+    if(p.axis_y_max!=null)g('yMax').value=p.axis_y_max;
+    if(p.plot_title!=null){g('inputTitle').value=p.plot_title;if(p.plot_title){state.titleLocked=true;updateTitleLockUi();}}
+    if(p.label_x_axis!=null)g('inputXLabel').value=p.label_x_axis;
+    if(p.label_y_axis!=null)g('inputYLabel').value=p.label_y_axis;
+    if(p.label_colorbar!=null){g('inputCbarLabel').value=p.label_colorbar;if(p.label_colorbar){state.cbarLocked=true;updateCbarLockUi();}}
+    if(state.plotRendered)renderPlot();
+  };
+  reader.readAsText(file);
+}
+
+// Control re-render wiring
+['cmapSelect','band5','band10','majorGrid','minorGrid','showColorbar'].forEach(id=>{
+  g(id)&&g(id).addEventListener('change',()=>{if(state.plotRendered)renderPlot();});
+});
+['inputTitle','inputXLabel','inputYLabel','inputCbarLabel'].forEach(id=>{
+  const el=g(id);if(!el)return;
+  el.addEventListener('change',()=>{if(state.plotRendered)renderPlot();});
+  el.addEventListener('input',debounce(()=>{if(state.plotRendered)renderPlot();},450));
+});
+['xMin','xMax','yMin','yMax'].forEach(id=>{
+  g(id)&&g(id).addEventListener('change',()=>{if(state.plotRendered)renderPlot();});
+});
+g('edgeColor').addEventListener('input',()=>{if(state.plotRendered)renderPlot();});
+
+// Sliders
+[
+  ['markerSize','markerSizeVal','int'],
+  ['markerOpacity','markerOpacityVal','pct'],
+  ['cbarThickness','cbarThicknessVal','int'],
+  ['edgeWidth','edgeWidthVal','float1'],
+  ['figW','figWVal','px'],
+  ['figH','figHVal','px'],
+  ['fsTitle','fsTitleVal','int'],
+  ['fsAxisLabel','fsAxisLabelVal','int'],
+  ['fsTick','fsTickVal','int'],
+  ['fsLegend','fsLegendVal','int'],
+  ['fsAnnot','fsAnnotVal','int'],
+  ['fsCbarTick','fsCbarTickVal','int'],
+  ['fsCbarTitle','fsCbarTitleVal','int'],
+].forEach(([sid,vid,fmt])=>{
+  const el=g(sid),val=g(vid);if(!el||!val)return;
+  const isNum=val.tagName==='INPUT';
+  function setVal(v){
+    if(fmt==='float1'){if(isNum)val.value=parseFloat(v).toFixed(1);else val.textContent=parseFloat(v).toFixed(1);}
+    else if(fmt==='px'){if(isNum)val.value=v;else val.textContent=v+' px';}
+    else if(fmt==='pct'){if(isNum)val.value=v;else val.textContent=v+'%';}
+    else{if(isNum)val.value=v;else val.textContent=v;}
+  }
+  el.addEventListener('input',function(){setVal(this.value);if(state.plotRendered)renderPlot();});
+  if(isNum){
+    val.addEventListener('change',function(){
+      let v=parseFloat(this.value);
+      if(isNaN(v))v=parseFloat(el.value);
+      v=Math.max(parseFloat(el.min),Math.min(parseFloat(el.max),v));
+      v=fmt==='float1'?+v.toFixed(1):Math.round(v/parseFloat(el.step||1))*parseFloat(el.step||1);
+      this.value=v;el.value=v;
+      if(state.plotRendered)renderPlot();
+    });
+  }
+});
+
+/* ══════════════════════════════════════════════════
+   SECTION 5 — SAVED PLOTS PANEL
+══════════════════════════════════════════════════ */
+async function savePlot(){
+  if(!state.plotRendered)return;
+  const idx=state.savedPlots.length;
+  const snap={
+    data:JSON.parse(JSON.stringify(plotState.data)),
+    layout:JSON.parse(JSON.stringify(plotState.layout)),
+    meta:{...plotState.meta},
+    title:plotState.layout.title?.text||`Plot ${idx+1}`,
+    thumb:null,
+  };
+  state.savedPlots.push(snap);
+  mkCard(idx,snap,true);
+  try{
+    const url=await Plotly.toImage('plotDiv',{format:'png',width:200,height:120});
+    snap.thumb=url;
+    const img=document.querySelector(`#saved-card-${idx} .saved-thumb`);
+    if(img){img.src=url;img.style.display='';const ph=img.previousElementSibling;if(ph)ph.style.display='none';}
+  }catch(e){}
+}
+function mkCard(idx,snap,scroll){
+  if(state.savedPlots.filter(Boolean).length===1)g('savedStrip').style.display='block';
+  const strip=g('savedScroll');
+  const card=document.createElement('div');
+  card.className='saved-card';card.id=`saved-card-${idx}`;
+  card.innerHTML=`
+    <div class="saved-thumb-placeholder" style="display:${snap.thumb?'none':'flex'}">generating…</div>
+    <img class="saved-thumb" src="${snap.thumb||''}" style="display:${snap.thumb?'block':'none'}" alt="Plot thumbnail">
+    <div class="saved-card-footer">
+      <input class="saved-card-title" type="text" value="${snap.title}" placeholder="Title…" aria-label="Saved plot title" onclick="event.stopPropagation()">
+      <button class="saved-del" onclick="delSaved(${idx},event)" aria-label="Delete" title="Delete">×</button>
+    </div>`;
+  card.addEventListener('click',()=>restorePlot(idx));
+  strip.appendChild(card);
+  if(scroll)card.scrollIntoView({behavior:'smooth',block:'nearest',inline:'end'});
+}
+function restorePlot(idx){
+  const snap=state.savedPlots[idx];if(!snap)return;
+  g('emptyState').classList.add('hidden');g('plotArea').classList.remove('hidden');
+  const pd=g('plotDiv');
+  if(snap.layout.width){const w=snap.layout.width;pd.style.width=w+'px';g('figW').value=w;g('figWVal').value=w;}
+  if(snap.layout.height){const h=snap.layout.height;pd.style.height=h+'px';g('figH').value=h;g('figHVal').value=h;}
+  Plotly.react('plotDiv',snap.data,snap.layout,{responsive:false,displayModeBar:true,displaylogo:false,edits:{legendPosition:true,annotationPosition:true}});
+  plotState.data=snap.data;plotState.layout=snap.layout;plotState.meta=snap.meta;
+  state.plotRendered=true;
+  if(snap.meta){
+    if(snap.meta.colA!=null){state.colA=snap.meta.colA;const el=g('colASearch');if(el){el.value=lbl(snap.meta.colA,'A');const v=snap.meta.colA+'\x00A';el.dataset.selected=v;el._selVal=v;}}
+    if(snap.meta.colB!=null){state.colB=snap.meta.colB;const el=g('colBSearch');if(el){el.value=lbl(snap.meta.colB,'B');const v=snap.meta.colB+'\x00B';el.dataset.selected=v;el._selVal=v;}}
+    if(snap.meta.colorCol!=null){state.colorCol=snap.meta.colorCol;state.colorSource=snap.meta.colorSource;const el=g('colorSearch');if(el){el.value=snap.meta.colorCol;const v=snap.meta.colorCol+'\x00'+(snap.meta.colorSource||'');el.dataset.selected=v;el._selVal=v;}}
+    else{state.colorCol=null;state.colorSource=null;}
+    g('colorSearch')._syncClear?.();g('colASearch')._syncClear?.();g('colBSearch')._syncClear?.();
+    renderStats(snap.meta.xV,snap.meta.yV,snap.meta.nan,snap.meta.stats);
+  }
+  g('statsPanel').style.display='';
+  document.querySelectorAll('.saved-card').forEach((c,i)=>c.classList.toggle('active-card',i===idx));
+  g('downloadBtn').style.display='';
+}
+function delSaved(idx,e){
+  e.stopPropagation();state.savedPlots[idx]=null;
+  const card=g(`saved-card-${idx}`);if(card)card.remove();
+}
+
+/* ══════════════════════════════════════════════════
+   SECTION 6 — STATS PANEL
+══════════════════════════════════════════════════ */
+function renderStats(xV,yV,nan,stats){
+  const grid=g('statsGrid');
+  if(!stats||stats.n===0){
+    grid.innerHTML='<div class="stat-card"><div class="stat-label">No valid data</div><div class="stat-value muted">N/A</div></div>';
+    return;
+  }
+  const{n,r2p,rmse,mae,maxE,bias,slope,intc,r2f}=stats;
+  const f=(v,d=4)=>isNaN(v)?'N/A':(+v).toPrecision(d);
+  const fs=v=>isNaN(v)?'N/A':v.toFixed(4);
+  grid.innerHTML=`
+    <div class="stat-card"><div class="stat-label">N matched</div><div class="stat-value">${n}</div></div>
+    <div class="stat-card"><div class="stat-label">N excluded (NaN)</div><div class="stat-value muted">${nan}</div></div>
+    <div class="stat-card" title="Nash-Sutcliffe Efficiency (NSE). NSE=1 is perfect; NSE&lt;0 means the mean of observations is a better predictor than the model."><div class="stat-label">Parity R² (NSE)</div><div class="stat-value ${r2p>0.99?'good':r2p<0?'warn':''}">${fs(r2p)}</div></div>
+    <div class="stat-card"><div class="stat-label">MAE</div><div class="stat-value">${f(mae)}</div></div>
+    <div class="stat-card"><div class="stat-label">RMSE</div><div class="stat-value">${f(rmse)}</div></div>
+    <div class="stat-card"><div class="stat-label">Max |error|</div><div class="stat-value">${f(maxE)}</div></div>
+    <div class="stat-card"><div class="stat-label">Mean bias (B−A)</div><div class="stat-value">${f(bias)}</div></div>
+    <div class="stat-card" style="grid-column:span 2"><div class="stat-label">Best-fit line</div><div class="stat-value" style="font-size:12px">${n>=3?`y = ${fs(slope)}x + ${fs(intc)} &nbsp;·&nbsp; R² = ${fs(r2f)}`:'n &lt; 3 — insufficient data for regression'}</div></div>`;
+}
+
+/* ══════════════════════════════════════════════════
+   FILE WIRING + UTILITIES
+══════════════════════════════════════════════════ */
+function wireDropzone(dzId,fileId,which){
+  const dz=g(dzId),fi=g(fileId);
+  fi.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0],which);});
+  dz.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fi.click();}});
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)handleFile(f,which);});
+}
+function handleFile(file,which){
+  if(which==='A')state._fileA={name:file.name,size:file.size};
+  else state._fileB={name:file.name,size:file.size};
+  setSt(which,'Parsing…','');
+  parseCSV(file,result=>{
+    if(result.errors.length&&!result.data.length){setSt(which,'Parse error — check file format','error');return;}
+    onFileParsed(which,result.data,result.meta.fields||Object.keys(result.data[0]||{}));
+  });
+}
+wireDropzone('dzA','fileA','A');
+wireDropzone('dzB','fileB','B');
+
+const _rebuildCols=debounce(()=>{if(state.rawA&&state.rawB)buildColDropdowns();},300);
+const _rerender=debounce(()=>{if(state.plotRendered)renderPlot();},350);
+g('nameA').addEventListener('input',function(){
+  const prev=state.nameA;state.nameA=this.value||'Dataset A';
+  const xl=g('inputXLabel');
+  if(state.colA&&xl.value===`[${prev}] ${state.colA}`)xl.value=`[${state.nameA}] ${state.colA}`;
+  _rebuildCols();_rerender();
+});
+g('nameB').addEventListener('input',function(){
+  const prev=state.nameB;state.nameB=this.value||'Dataset B';
+  const yl=g('inputYLabel');
+  if(state.colB&&yl.value===`[${prev}] ${state.colB}`)yl.value=`[${state.nameB}] ${state.colB}`;
+  _rebuildCols();_rerender();
+});
+
+// Title lock button
+g('titleLock').addEventListener('click',()=>{
+  state.titleLocked=!state.titleLocked;
+  updateTitleLockUi();
+  if(!state.titleLocked)syncTitle();
+  if(state.plotRendered)renderPlot();
+});
+g('inputTitle').addEventListener('input',()=>{
+  if(!state.titleLocked){state.titleLocked=true;updateTitleLockUi();}
+});
+updateTitleLockUi();
+
+// Colorbar label lock button
+g('cbarLock').addEventListener('click',()=>{
+  state.cbarLocked=!state.cbarLocked;
+  updateCbarLockUi();
+  if(!state.cbarLocked)syncCbar();
+  if(state.plotRendered)renderPlot();
+});
+g('inputCbarLabel').addEventListener('input',()=>{
+  if(!state.cbarLocked){state.cbarLocked=true;updateCbarLockUi();}
+});
+updateCbarLockUi();
+
+// Style preset file input
+g('presetFileInput').addEventListener('change',function(){loadPreset(this.files[0]);this.value='';});
+
+// Color-by clear button
+(function(){
+  const inp=g('colorSearch'),btn=g('colorClear');
+  function syncClear(){inp.classList.toggle('has-clear',!!inp.dataset.selected);btn.classList.toggle('hidden',!inp.dataset.selected);}
+  btn.addEventListener('mousedown',e=>{
+    e.preventDefault();
+    inp.value='';inp.dataset.selected='';inp._selVal=undefined;
+    state.colorCol=null;state.colorSource=null;
+    syncCbar();
+    syncClear();
+    if(state.plotRendered)renderPlot();
+  });
+  // expose so makeDD onSel can trigger it after selection
+  inp.addEventListener('input',syncClear);
+  inp.addEventListener('focus',syncClear);
+  g('colorSearch')._syncClear=syncClear;
+})();
+
+// Join-key clear button
+(function(){
+  const inp=g('keySearch'),btn=g('keyClear');
+  function syncClear(){inp.classList.toggle('has-clear',!!inp.dataset.selected);btn.classList.toggle('hidden',!inp.dataset.selected);}
+  btn.addEventListener('mousedown',e=>{
+    e.preventDefault();
+    inp.value='';inp.dataset.selected='';inp._selVal=undefined;
+    state.joinKey=null;state.joinedA=[];state.joinedB=[];
+    clearEl('joinAlerts');
+    ['colASearch','colBSearch','colorSearch'].forEach(id=>{const el=g(id);if(el){el.value='';el.dataset.selected='';el._selVal=undefined;}});
+    g('colorSearch')._syncClear?.();g('colASearch')._syncClear?.();g('colBSearch')._syncClear?.();
+    state.colA=null;state.colB=null;state.colorCol=null;state.colorSource=null;
+    ['colSection','ctrlSection','typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='none');
+    if(state.plotRendered){state.plotRendered=false;g('plotArea').classList.add('hidden');g('emptyState').classList.remove('hidden');g('statsPanel').style.display='none';g('downloadBtn').style.display='none';g('showCbarRow').style.display='none';g('cbarExportBtn').style.display='none';g('renderBtn').textContent='Render plot';}
+    syncClear();
+  });
+  inp.addEventListener('input',syncClear);
+  inp.addEventListener('focus',syncClear);
+  g('keySearch')._syncClear=syncClear;
+})();
+
+// X-axis column clear button
+(function(){
+  const inp=g('colASearch'),btn=g('colAClear');
+  function syncClear(){inp.classList.toggle('has-clear',!!inp.dataset.selected);btn.classList.toggle('hidden',!inp.dataset.selected);}
+  btn.addEventListener('mousedown',e=>{
+    e.preventDefault();
+    inp.value='';inp.dataset.selected='';inp._selVal=undefined;
+    state.colA=null;
+    g('inputXLabel').value='';
+    syncTitle();
+    ['ctrlSection','typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='none');
+    if(state.plotRendered){state.plotRendered=false;g('plotArea').classList.add('hidden');g('emptyState').classList.remove('hidden');g('statsPanel').style.display='none';g('downloadBtn').style.display='none';g('showCbarRow').style.display='none';g('cbarExportBtn').style.display='none';g('renderBtn').textContent='Render plot';}
+    syncClear();
+  });
+  inp.addEventListener('input',syncClear);
+  inp.addEventListener('focus',syncClear);
+  g('colASearch')._syncClear=syncClear;
+})();
+
+// Y-axis column clear button
+(function(){
+  const inp=g('colBSearch'),btn=g('colBClear');
+  function syncClear(){inp.classList.toggle('has-clear',!!inp.dataset.selected);btn.classList.toggle('hidden',!inp.dataset.selected);}
+  btn.addEventListener('mousedown',e=>{
+    e.preventDefault();
+    inp.value='';inp.dataset.selected='';inp._selVal=undefined;
+    state.colB=null;
+    g('inputYLabel').value='';
+    syncTitle();
+    ['ctrlSection','typographySection','presetSection','saveSection'].forEach(id=>g(id).style.display='none');
+    if(state.plotRendered){state.plotRendered=false;g('plotArea').classList.add('hidden');g('emptyState').classList.remove('hidden');g('statsPanel').style.display='none';g('downloadBtn').style.display='none';g('showCbarRow').style.display='none';g('cbarExportBtn').style.display='none';g('renderBtn').textContent='Render plot';}
+    syncClear();
+  });
+  inp.addEventListener('input',syncClear);
+  inp.addEventListener('focus',syncClear);
+  g('colBSearch')._syncClear=syncClear;
+})();
+
+function toggleSavedScroll(){
+  const scroll=g('savedScroll'),btn=g('savedStripToggle');
+  const collapsed=scroll.style.display==='none';
+  scroll.style.display=collapsed?'flex':'none';
+  btn.textContent=collapsed?'▼':'▶';
+  btn.setAttribute('aria-expanded',String(collapsed));
+}
+function clearEl(id){g(id).innerHTML='';}
+function debounce(fn,d){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),d);};}
+
+renderTabBar();
+</script>
+</body>
+</html>

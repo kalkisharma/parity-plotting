@@ -36,7 +36,7 @@ const appJs = [
 // Use function replacements so $ characters in Plotly's minified code are
 // not misinterpreted as backreference patterns by String.replace.
 let html = read('src/index.html');
-html = html.replace('%%VERSION%%',            () => VERSION);
+html = html.replace(/%%VERSION%%/g,           () => VERSION);
 html = html.replace('<!-- INJECT:LIBS -->',   () => libs);
 html = html.replace('<!-- INJECT:STYLE -->',  () => style);
 html = html.replace('/* INJECT:SCRIPT */',    () => appJs);

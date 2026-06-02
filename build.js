@@ -5,7 +5,7 @@
 const fs   = require('fs');
 const path = require('path');
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 const ROOT = __dirname;
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');

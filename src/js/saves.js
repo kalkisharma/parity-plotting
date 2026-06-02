@@ -29,7 +29,7 @@ function mkCard(idx,snap,scroll){
     <div class="saved-thumb-placeholder" style="display:${snap.thumb?'none':'flex'}">generating…</div>
     <img class="saved-thumb" src="${snap.thumb||''}" style="display:${snap.thumb?'block':'none'}" alt="Plot thumbnail">
     <div class="saved-card-footer">
-      <input class="saved-card-title" type="text" value="${snap.title}" placeholder="Title…" aria-label="Saved plot title" onclick="event.stopPropagation()">
+      <input class="saved-card-title" type="text" value="${escHtml(snap.title)}" placeholder="Title…" aria-label="Saved plot title" onclick="event.stopPropagation()">
       <button class="saved-del" onclick="delSaved(${idx},event)" aria-label="Delete" title="Delete">×</button>
     </div>`;
   card.setAttribute('tabindex','0');

@@ -127,7 +127,7 @@ function captureCurrentSession(){
   s.state.headersB=[...state.headersB];
   s.state.joinedA=state.joinedA.slice();
   s.state.joinedB=state.joinedB.slice();
-  s.state.savedPlots=state.savedPlots.map(p=>p?{...p}:null);
+  s.state.savedPlots=state.savedPlots.map(p=>p?{...p,data:JSON.parse(JSON.stringify(p.data)),layout:JSON.parse(JSON.stringify(p.layout))}:null);
   s.plotState={
     data:state.plotRendered?JSON.parse(JSON.stringify(plotState.data)):[],
     layout:state.plotRendered?JSON.parse(JSON.stringify(plotState.layout)):{},

@@ -40,7 +40,7 @@ function computeStats(xV,yV){
   const r2p=ssT===0?NaN:1-ssR/ssT;
   const rmse=Math.sqrt(ssR/n);
   const mae=res.reduce((s,r)=>s+Math.abs(r),0)/n;
-  const maxE=Math.max(...res.map(Math.abs));
+  const maxE=res.reduce((m,r)=>{const a=Math.abs(r);return a>m?a:m;},0);
   const bias=res.reduce((a,b)=>a+b,0)/n;
   const mX=xV.reduce((a,b)=>a+b,0)/n;
   const ssXX=xV.reduce((s,x)=>s+(x-mX)**2,0);
@@ -52,19 +52,22 @@ function computeStats(xV,yV){
   return{n,r2p,rmse,mae,maxE,bias,slope,intc,r2f};
 }
 
+let _annotDragHandler=null;
 function renderPlot(){
   if(!state.colA||!state.colB){alert('Please select columns for both X and Y axes.');return;}
 
   const xRaw=colVals(state.joinedA,state.colA);
   const yRaw=colVals(state.joinedB,state.colB);
   const cRaw=state.colorCol?colVals(state.colorSource==='A'?state.joinedA:state.joinedB,state.colorCol):[];
+  // cRawStr preserves original values as strings for categorical coloring (colVals loses strings via Number())
+  const cRawStr=state.colorCol?(state.colorSource==='A'?state.joinedA:state.joinedB).map(r=>{const v=r[state.colorCol];return(v===null||v===undefined||v==='')?null:String(v);}):[];
 
   // xV, yV, cV are built in lockstep — cV[k] always corresponds to xV[k]/yV[k].
   // finIdxs/nanIdxs computed from cV are safe to index into xV/yV. Do not reorder independently.
-  let xV=[],yV=[],cV=[],nan=0;
+  let xV=[],yV=[],cV=[],cVStr=[],nan=0;
   for(let i=0;i<xRaw.length;i++){
     if(isNaN(xRaw[i])||isNaN(yRaw[i])){nan++;continue;}
-    xV.push(xRaw[i]);yV.push(yRaw[i]);cV.push(cRaw[i]!==undefined?cRaw[i]:null);
+    xV.push(xRaw[i]);yV.push(yRaw[i]);cV.push(cRaw[i]!==undefined?cRaw[i]:null);cVStr.push(cRawStr.length?cRawStr[i]??null:null);
   }
 
   // Manual overrides
@@ -85,7 +88,7 @@ function renderPlot(){
 
   // Auto range from combined x+y
   const allFin=[...xV,...yV].filter(isFinite);
-  const dataMn=Math.min(...allFin),dataMx=Math.max(...allFin);
+  const dataMn=allFin.reduce((m,v)=>v<m?v:m,Infinity),dataMx=allFin.reduce((m,v)=>v>m?v:m,-Infinity);
   const pad=(dataMx-dataMn)*0.05||1;
   const autoMin=dataMn-pad,autoMax=dataMx+pad;
   if(man.xMin!==null&&man.xMax!==null&&man.xMin>=man.xMax){g('rangeAlerts').innerHTML='<div class="alert warn">X min must be less than X max.</div>';return;}
@@ -169,19 +172,19 @@ function renderPlot(){
       });
     }
   }else{
-    const cats=[...new Set(cV.map(String))].filter(c=>c!=='NaN'&&c!=='').sort();
+    const cats=[...new Set(cVStr.filter(v=>v!=null&&v!==''))].sort();
     if(cats.length>12)g('fileAlerts').innerHTML='<div class="alert warn">Color-by column has >12 categories — colors will repeat.</div>';
-    const nanCatIdxs=cV.reduce((a,v,i)=>(!Number.isFinite(v)&&typeof v!=='string')||v===''?[...a,i]:a,[]);
+    const nanCatIdxs=[];cVStr.forEach((v,i)=>{if(v===null||v==='')nanCatIdxs.push(i);});
     if(nanCatIdxs.length>0)traces.push({x:nanCatIdxs.map(i=>xV[i]),y:nanCatIdxs.map(i=>yV[i]),mode:'markers',type:'scatter',
       name:'No color data',marker:{...baseMarker,color:'#888888'},
       hovertemplate:'No color data<br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>'});
     cats.forEach((cat,ci)=>{
-      const idxs=cV.reduce((a,v,i)=>String(v)===cat?[...a,i]:a,[]);
+      const idxs=[];cVStr.forEach((v,i)=>{if(v===cat)idxs.push(i);});
       traces.push({
         x:idxs.map(i=>xV[i]),y:idxs.map(i=>yV[i]),
         mode:'markers',type:'scatter',name:cat,
         marker:{...baseMarker,color:TABLEAU12[ci%TABLEAU12.length]},
-        hovertemplate:`<b>${cat}</b><br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>`,
+        hovertemplate:`<b>${escHtml(cat)}</b><br>X: %{x:.4g}<br>Y: %{y:.4g}<extra></extra>`,
       });
     });
   }
@@ -264,13 +267,13 @@ function renderPlot(){
     edits:{legendPosition:true,annotationPosition:true},
   });
 
-  // Capture annotation drag position
-  pd.on('plotly_relayout',e=>{
+  // Capture annotation drag position — deregister previous handler before adding to prevent accumulation
+  if(_annotDragHandler)try{pd.removeListener('plotly_relayout',_annotDragHandler);}catch(e){}
+  _annotDragHandler=e=>{
     const ax=e['annotations[0].x'],ay=e['annotations[0].y'];
-    if(ax!==undefined&&ay!==undefined){
-      state.annotPos={x:ax,y:ay};
-    }
-  });
+    if(ax!==undefined&&ay!==undefined)state.annotPos={x:ax,y:ay};
+  };
+  pd.on('plotly_relayout',_annotDragHandler);
 
   state.plotRendered=true;
   g('downloadBtn').style.display='';
@@ -311,7 +314,7 @@ async function downloadColorbar(){
   const rows=state.colorSource==='A'?state.joinedA:state.joinedB;
   const cVals=colVals(rows,state.colorCol).filter(v=>Number.isFinite(v));
   if(!cVals.length||!isNum(cVals))return;
-  const cMin=Math.min(...cVals),cMax=Math.max(...cVals);
+  const cMin=cVals.reduce((m,v)=>v<m?v:m,Infinity),cMax=cVals.reduce((m,v)=>v>m?v:m,-Infinity);
   const cbW=iv('cbarThickness'),fsCt=iv('fsCbarTick'),fsCT=iv('fsCbarTitle');
   const ph=Math.max(220,Math.round(iv('figH')*0.65));
   const pw=cbW+90;
@@ -439,6 +442,7 @@ function loadPreset(file){
       const isInput=lbl.tagName==='INPUT';
       if(fmt==='float1'){if(isInput)lbl.value=parseFloat(v).toFixed(1);else lbl.textContent=parseFloat(v).toFixed(1);}
       else if(fmt==='px'){if(isInput)lbl.value=v;else lbl.textContent=v+' px';}
+      else if(fmt==='pct'){if(isInput)lbl.value=String(v);else lbl.textContent=v+'%';}
       else{if(isInput)lbl.value=String(v);else lbl.textContent=String(v);}
     };
     ss('cmapSelect',p.colormap);

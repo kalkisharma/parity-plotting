@@ -181,5 +181,6 @@ function debounce(fn,d){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn
 renderTabBar();
 
 window.addEventListener('beforeunload',e=>{
-  if(state.savedPlots.filter(Boolean).length>0){e.preventDefault();e.returnValue='';}
+  const hasSaved=sessions.some((s,i)=>i===activeSession?state.savedPlots.filter(Boolean).length>0:s.state.savedPlots.filter(Boolean).length>0);
+  if(hasSaved){e.preventDefault();e.returnValue='';}
 });
